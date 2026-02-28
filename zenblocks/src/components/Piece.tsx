@@ -1,5 +1,9 @@
 /**
  * Single piece view: mini-grid of blocks. Used in tray and as drag ghost.
+ * Neon Night polish:
+ * - subtle neon outline
+ * - inner highlight (glassy)
+ * - color-based shadow so pieces pop on dark UI
  */
 
 import React from "react";
@@ -34,9 +38,14 @@ export function PieceView({ piece, cellSize, style }: PieceProps) {
                   left: c * cellSize + 1,
                   top: r * cellSize + 1,
                   backgroundColor: color,
+                  borderColor: "rgba(255,255,255,0.18)",
+                  shadowColor: color,
                 },
               ]}
-            />
+            >
+              {/* inner highlight */}
+              <View style={styles.innerHighlight} />
+            </View>
           ) : null
         )
       )}
@@ -51,10 +60,22 @@ const styles = StyleSheet.create({
   block: {
     position: "absolute",
     borderRadius: borderRadius.sm,
-    shadowColor: "#1A1520",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 3,
-    elevation: 3,
+    borderWidth: 1,
+
+    // neon pop shadow (per block)
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    elevation: 6,
+    overflow: "hidden",
+  },
+  innerHighlight: {
+    position: "absolute",
+    left: 2,
+    top: 2,
+    right: 2,
+    height: "40%",
+    borderRadius: borderRadius.sm,
+    backgroundColor: "rgba(255,255,255,0.18)",
   },
 });

@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "zenblocks",
-    "slug": "zenblocks",
+    "name": "neonblocks",
+    "slug": "neonblocks",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "zenblocks",
+    "scheme": "neonblocks",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {

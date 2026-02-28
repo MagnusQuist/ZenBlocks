@@ -7,8 +7,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const KEYS = {
-  CURRENT_LEVEL: "@zenblocks/currentLevel",
-  SETTINGS: "@zenblocks/settings",
+  CURRENT_LEVEL: "@neonblocks/currentLevel",
+  SETTINGS: "@neonblocks/settings",
 } as const;
 
 export type StoredSettings = {

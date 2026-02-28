@@ -1,8 +1,10 @@
 /**
- * Grid board: measures layout, renders cells and placed pieces.
- * Reports cell size and origin for drag/snap coordinate conversion.
- * Completion ripple: when showCompletionRipple is true, each filled 1x1 block
- * runs a staggered scale/opacity animation so the ripple waves across the board.
+ * Grid board (Neon Night):
+ * - glass board container
+ * - subtle grid lines
+ * - valid placement highlights as neon outlines
+ * - placed blocks have inner highlight for glass feel
+ * - completion ripple uses accent glow
  */
 
 import React, { useCallback, useEffect, useMemo } from "react";
@@ -124,6 +126,7 @@ export function Grid({
     cellSize: number;
     gridSize: number;
   } | null>(null);
+
   const gridWrapRef = React.useRef<View>(null);
 
   const handleLayout = useCallback(
@@ -178,34 +181,37 @@ export function Grid({
             ]}
           >
             {grid.map((row, r) =>
-              row.map((_, c) => (
-                <View
-                  key={`${r}-${c}`}
-                  style={[
-                    styles.cell,
-                    {
-                      width: layout.cellSize - 2,
-                      height: layout.cellSize - 2,
-                      left: c * layout.cellSize + 1,
-                      top: r * layout.cellSize + 1,
-                      backgroundColor: highlightSet.has(`${r},${c}`)
-                        ? colors.validHighlight
-                        : colors.cellEmpty,
-                      ...(highlightSet.has(`${r},${c}`) && {
-                        borderWidth: 2,
-                        borderColor: colors.validHighlightBorder,
-                      }),
-                    },
-                  ]}
-                />
-              ))
+              row.map((_, c) => {
+                const isHighlighted = highlightSet.has(`${r},${c}`);
+                return (
+                  <View
+                    key={`${r}-${c}`}
+                    style={[
+                      styles.cell,
+                      {
+                        width: layout.cellSize - 2,
+                        height: layout.cellSize - 2,
+                        left: c * layout.cellSize + 1,
+                        top: r * layout.cellSize + 1,
+                        backgroundColor: isHighlighted ? colors.validHighlight : colors.cellEmpty,
+                        borderColor: isHighlighted
+                          ? colors.validHighlightBorder
+                          : "rgba(255,255,255,0.08)",
+                        borderWidth: 1,
+                      },
+                    ]}
+                  />
+                );
+              })
             )}
           </View>
-          {/* Placed pieces (locked) */}
+
+          {/* Placed pieces */}
           {placedPlacements.map((pl) => {
             const piece = pieceByPieceId.get(pl.pieceId);
             if (!piece) return null;
             const color = (colors as Record<string, string>)[piece.colorKey] ?? colors.cellFilled;
+
             return (
               <View
                 key={pl.pieceId}
@@ -231,18 +237,22 @@ export function Grid({
                             left: c * layout.cellSize + 2,
                             top: r * layout.cellSize + 2,
                             backgroundColor: color,
+                            borderColor: "rgba(255,255,255,0.18)",
+                            shadowColor: color,
                           },
                         ]}
-                      />
+                      >
+                        <View style={styles.blockHighlight} />
+                      </View>
                     ) : null
                   )
                 )}
               </View>
             );
           })}
-          {/* Completion ripple: one animated block per filled cell, staggered by index */}
+
+          {/* Completion ripple */}
           {showCompletionRipple &&
-            layout &&
             filledCells.map(({ r, c }, i) => (
               <RippleBlock
                 key={`${r}-${c}`}
@@ -265,40 +275,56 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 200,
   },
+
   gridWrap: {
     position: "absolute",
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    borderWidth: 2,
-    borderColor: colors.gridLine,
+    backgroundColor: "transparent", // ✅ sits on background
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
     overflow: "hidden",
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
   },
-  rippleBlock: {
-    position: "absolute",
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.sm,
-  },
+
   cell: {
     position: "absolute",
     borderRadius: borderRadius.sm,
   },
+
   pieceWrap: {
     position: "absolute",
     pointerEvents: "none",
   },
+
   block: {
     position: "absolute",
     borderRadius: borderRadius.sm,
-    shadowColor: "#1A1520",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 3,
+    borderWidth: 1,
+    overflow: "hidden",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.20,
+    shadowRadius: 18,
+    elevation: 7,
+  },
+
+  blockHighlight: {
+    position: "absolute",
+    left: 2,
+    top: 2,
+    right: 2,
+    height: "40%",
+    borderRadius: borderRadius.sm,
+    backgroundColor: "rgba(255,255,255,0.16)",
+  },
+
+  rippleBlock: {
+    position: "absolute",
+    backgroundColor: colors.accent,
+    borderRadius: borderRadius.sm,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    elevation: 6,
   },
 });
 

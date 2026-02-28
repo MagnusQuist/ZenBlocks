@@ -1,16 +1,17 @@
 /**
- * Tray of remaining pieces. Fixed-height horizontal scroll; drag starts from here.
+ * Tray of remaining pieces.
+ * Clean Neon Night shelf style (no double container).
  */
 
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
-import { PieceView } from "./Piece";
 import type { Piece } from "../game/levelGenerator";
+import { spacing } from "../theme";
 
-const TRAY_CELL_SIZE = 28;
-const TRAY_GAP = 10;
-/** Extra touch area around each piece so they're easier to grab. */
+const TRAY_CELL_SIZE = 26;
+const TRAY_GAP = 4;
+
 export const TRAY_HIT_SLOP = 14;
 
 type PieceTrayProps = {
@@ -19,15 +20,13 @@ type PieceTrayProps = {
   renderPiece: (piece: Piece) => React.ReactNode;
 };
 
-/** Horizontal ScrollView so the tray keeps a fixed height and scrolls when there are many pieces. */
 export function PieceTray({ pieces, onPieceLayout, renderPiece }: PieceTrayProps) {
   return (
     <View style={styles.container}>
       <ScrollView
         horizontal
-        showsHorizontalScrollIndicator={true}
+        showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        style={styles.scrollView}
       >
         {pieces.map((piece) => (
           <PieceSlot
@@ -59,11 +58,13 @@ function PieceSlot({
   children: React.ReactNode;
 }) {
   const ref = React.useRef<View>(null);
+
   const onSlotLayout = React.useCallback(() => {
     ref.current?.measureInWindow((x, y, width, height) => {
       onLayout?.(piece.pieceId, x, y, width, height);
     });
   }, [piece.pieceId, onLayout]);
+
   return (
     <View
       ref={ref}
@@ -75,37 +76,20 @@ function PieceSlot({
   );
 }
 
-export function TrayPiecePlaceholder({ piece }: { piece: Piece }) {
-  const w = piece.width * TRAY_CELL_SIZE;
-  const h = piece.height * TRAY_CELL_SIZE;
-  return (
-    <View style={[styles.placeholder, { width: w, height: h }]}>
-      <PieceView piece={piece} cellSize={TRAY_CELL_SIZE} />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    minHeight: 0,
-  },
-  scrollView: {
     flex: 1,
   },
   scrollContent: {
     flexDirection: "row",
     alignItems: "center",
     gap: TRAY_GAP,
-    paddingHorizontal: 2,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
   },
   pieceSlot: {
     alignItems: "center",
     justifyContent: "center",
-  },
-  placeholder: {
-    alignItems: "flex-start",
-    justifyContent: "flex-start",
   },
 });
 

@@ -1,36 +1,50 @@
 /**
- * Vibrant, eye-catching palette: rich colors, strong contrast, playful but polished.
+ * Neon Night palette: dark, high-contrast, vibrant neon accents.
+ * Designed for a premium "night arcade / synthwave" vibe.
  */
 
 export const colors = {
-  background: "#EDE6F2",
-  surface: "#FFFFFF",
-  surfaceElevated: "#F8F5FC",
-  text: "#1A1520",
-  textMuted: "#5A5166",
-  border: "#D4C8E0",
-  gridLine: "#C2B2D4",
-  cellEmpty: "#E8E0F0",
-  cellFilled: "#B8A8C8",
-  // Piece colors – saturated and distinct
-  coral: "#E85D4D",
-  mint: "#3DB86B",
-  sky: "#3D8FD4",
-  lavender: "#8B5EB8",
-  peach: "#E89A2E",
-  sage: "#5A9B4A",
-  rose: "#D84A5A",
-  sand: "#C49240",
-  // UI – bold purple, drawer
-  primary: "#6B4C9E",
-  primaryPressed: "#5A3D8A",
-  primaryGlow: "rgba(107, 76, 158, 0.35)",
-  danger: "#C44C4C",
-  validHighlight: "rgba(107, 76, 158, 0.5)",
-  validHighlightBorder: "#6B4C9E",
-  ripple: "rgba(255,255,255,0.6)",
-  drawer: "#E0D6EC",
-  drawerBorder: "#C9B8DC",
+  // Base surfaces
+  background: "#070814",        // deep navy/near-black
+  surface: "#0D1030",           // card surface
+  surfaceElevated: "#12164A",   // elevated surface
+  text: "#EAF0FF",              // near-white
+  textMuted: "rgba(234,240,255,0.72)",
+  border: "rgba(255,255,255,0.10)",
+  gridLine: "rgba(255,255,255,0.14)",
+
+  // Board cells
+  cellEmpty: "rgba(255,255,255,0.06)",
+  cellFilled: "rgba(120, 100, 255, 0.35)",
+
+  // Piece colors (neon)
+  coral: "#FF4D6D",     // neon pink-red
+  mint: "#00F5D4",      // neon teal
+  sky: "#4EA8FF",       // neon blue
+  lavender: "#B517FF",  // neon purple
+  peach: "#FFB703",     // neon amber
+  sage: "#7CFF6B",      // neon green
+  rose: "#FF2EEA",      // hot pink
+  sand: "#FFD166",      // bright gold
+
+  // UI accents
+  primary: "#8B5CF6",          // violet neon
+  primaryPressed: "#6D28D9",
+  primaryGlow: "rgba(139, 92, 246, 0.45)",
+
+  // Secondary accent (cyan neon)
+  accent: "#00F5D4",
+  accentGlow: "rgba(0, 245, 212, 0.35)",
+
+  danger: "#FF4D6D",
+
+  validHighlight: "rgba(0, 245, 212, 0.22)",
+  validHighlightBorder: "rgba(0, 245, 212, 0.65)",
+
+  ripple: "rgba(255,255,255,0.65)",
+
+  drawer: "#0B0E25",
+  drawerBorder: "rgba(255,255,255,0.10)",
 } as const;
 
 export const pieceColorKeys = [
@@ -55,18 +69,19 @@ export const spacing = {
 } as const;
 
 export const borderRadius = {
-  sm: 6,
-  md: 10,
-  lg: 16,
-  xl: 20,
+  sm: 8,
+  md: 12,
+  lg: 18,
+  xl: 24,
   full: 9999,
 } as const;
 
 export const typography = {
-  display: { fontSize: 36, fontWeight: "700" as const },
-  title: { fontSize: 26, fontWeight: "700" as const },
-  header: { fontSize: 18, fontWeight: "600" as const },
-  body: { fontSize: 16, fontWeight: "500" as const },
-  caption: { fontSize: 14, fontWeight: "500" as const },
-  button: { fontSize: 16, fontWeight: "700" as const },
+  // "blocky title" effect is mostly achieved by styling + shadows
+  display: { fontSize: 44, fontWeight: "800" as const, letterSpacing: 0.5 },
+  title: { fontSize: 28, fontWeight: "800" as const, letterSpacing: 0.3 },
+  header: { fontSize: 18, fontWeight: "700" as const },
+  body: { fontSize: 16, fontWeight: "600" as const },
+  caption: { fontSize: 13, fontWeight: "600" as const },
+  button: { fontSize: 17, fontWeight: "800" as const, letterSpacing: 0.3 },
 };
