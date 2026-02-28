@@ -25,6 +25,41 @@ export const TIER_1_SHAPES: Shape[] = [
   shape("small-l", [[1, 0], [1, 1]]),
 ];
 
+/** Chunk shapes (large, very easy): rectangles + simple "B" / "U" style blocks */
+export const CHUNK_SHAPES: Shape[] = [
+  shape("2x3", [
+    [1, 1, 1],
+    [1, 1, 1],
+  ]), // 6-block rectangle
+
+  shape("3x2", [
+    [1, 1],
+    [1, 1],
+    [1, 1],
+  ]), // same as 2x3 but canonical orientation kept
+
+  shape("3x3", [
+    [1, 1, 1],
+    [1, 1, 1],
+    [1, 1, 1],
+  ]), // 9-block chunk (very powerful)
+
+  // "B" style chunk (compact 3x3-like mass without holes; 7 blocks)
+  // Visually reads as a chunky 'B' silhouette.
+  shape("b", [
+    [1, 1, 0],
+    [1, 1, 1],
+    [1, 1, 1],
+  ]),
+
+  // Slightly lighter chunk (7 blocks) that still fills space easily
+  shape("fat-l-7", [
+    [1, 1, 0],
+    [1, 1, 0],
+    [1, 1, 1],
+  ]),
+];
+
 /** Tier 2: tetrominoes — O, I, L, T, Z */
 export const TIER_2_SHAPES: Shape[] = [
   shape("o", [[1, 1], [1, 1]]),
@@ -44,6 +79,7 @@ export const TIER_3_SHAPES: Shape[] = [
 ];
 
 export const ALL_SHAPES: Shape[] = [
+  ...CHUNK_SHAPES,
   ...TIER_1_SHAPES,
   ...TIER_2_SHAPES,
   ...TIER_3_SHAPES,

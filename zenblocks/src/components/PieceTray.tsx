@@ -1,9 +1,10 @@
 /**
- * Tray of remaining pieces. Renders mini-grids; drag starts from here.
+ * Tray of remaining pieces. Fixed-height horizontal scroll; drag starts from here.
  */
 
 import React from "react";
 import { View, StyleSheet } from "react-native";
+import { ScrollView } from "react-native-gesture-handler";
 import { PieceView } from "./Piece";
 import type { Piece } from "../game/levelGenerator";
 
@@ -18,11 +19,16 @@ type PieceTrayProps = {
   renderPiece: (piece: Piece) => React.ReactNode;
 };
 
-/** No ScrollView so Pan gesture on pieces isn't stolen; pieces wrap to multiple rows if needed. */
+/** Horizontal ScrollView so the tray keeps a fixed height and scrolls when there are many pieces. */
 export function PieceTray({ pieces, onPieceLayout, renderPiece }: PieceTrayProps) {
   return (
     <View style={styles.container}>
-      <View style={styles.scrollContent}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={true}
+        contentContainerStyle={styles.scrollContent}
+        style={styles.scrollView}
+      >
         {pieces.map((piece) => (
           <PieceSlot
             key={piece.pieceId}
@@ -34,7 +40,7 @@ export function PieceTray({ pieces, onPieceLayout, renderPiece }: PieceTrayProps
             {renderPiece(piece)}
           </PieceSlot>
         ))}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -81,14 +87,17 @@ export function TrayPiecePlaceholder({ piece }: { piece: Piece }) {
 
 const styles = StyleSheet.create({
   container: {
-    minHeight: 80,
+    flex: 1,
+    minHeight: 0,
+  },
+  scrollView: {
+    flex: 1,
   },
   scrollContent: {
     flexDirection: "row",
-    flexWrap: "wrap",
     alignItems: "center",
-    justifyContent: "center",
     gap: TRAY_GAP,
+    paddingHorizontal: 2,
   },
   pieceSlot: {
     alignItems: "center",

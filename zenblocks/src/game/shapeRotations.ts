@@ -18,14 +18,42 @@ function rotate90(cells: number[][]): number[][] {
   return out;
 }
 
+function trimMatrix(m: number[][]): number[][] {
+  let top = 0, bottom = m.length - 1;
+  let left = 0, right = (m[0]?.length ?? 0) - 1;
+
+  const rowHasOne = (r: number) => m[r].some(v => v === 1);
+  const colHasOne = (c: number) => m.some(row => row[c] === 1);
+
+  while (top <= bottom && !rowHasOne(top)) top++;
+  while (bottom >= top && !rowHasOne(bottom)) bottom--;
+  while (left <= right && !colHasOne(left)) left++;
+  while (right >= left && !colHasOne(right)) right--;
+
+  const out: number[][] = [];
+  for (let r = top; r <= bottom; r++) {
+    out.push(m[r].slice(left, right + 1));
+  }
+
+  return out.length ? out : [[1]];
+}
+
 /** All four rotations of a matrix (0°, 90°, 180°, 270°) */
 export function allRotations(cells: number[][]): number[][][] {
-  const result: number[][][] = [cells];
-  let current = cells;
-  for (let i = 0; i < 3; i++) {
-    current = rotate90(current);
-    result.push(current.map((row) => [...row]));
+  const seen = new Set<string>();
+  const result: number[][][] = [];
+
+  let current = trimMatrix(cells);
+
+  for (let i = 0; i < 4; i++) {
+    const key = JSON.stringify(current);
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(current);
+    }
+    current = trimMatrix(rotate90(current));
   }
+
   return result;
 }
 

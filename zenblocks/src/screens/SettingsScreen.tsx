@@ -70,8 +70,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
+    paddingVertical: spacing.md + 4,
+    borderBottomWidth: 2,
     borderBottomColor: colors.border,
   },
   label: {
@@ -88,11 +88,14 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     marginTop: spacing.xl,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.md + 2,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
     alignItems: "center",
+    backgroundColor: colors.primary,
   },
   backText: {
     ...typography.button,
-    color: colors.primary,
+    color: "#FFF",
   },
 });

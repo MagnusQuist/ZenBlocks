@@ -1,34 +1,36 @@
 /**
- * Vibrant palette: richer background and piece colors, clear UI.
+ * Vibrant, eye-catching palette: rich colors, strong contrast, playful but polished.
  */
 
 export const colors = {
-  background: "#F5EEF5",
+  background: "#EDE6F2",
   surface: "#FFFFFF",
-  surfaceElevated: "#FAF8FA",
-  text: "#1E1B1E",
-  textMuted: "#5C5660",
-  border: "#DDD5E0",
-  gridLine: "#C9C0D0",
-  cellEmpty: "#EDE8ED",
-  cellFilled: "#C4B8C8",
-  // Piece colors – more saturated, easier to distinguish
-  coral: "#E0786A",
-  mint: "#5CB87A",
-  sky: "#5A9FD4",
-  lavender: "#9B7BB8",
-  peach: "#E8A858",
-  sage: "#7AAB6A",
-  rose: "#D86A7A",
-  sand: "#C9A86A",
-  // UI – clear purple, drawer
-  primary: "#7B5E9E",
-  primaryPressed: "#6A4D8C",
-  danger: "#B85C5C",
-  validHighlight: "rgba(123, 94, 158, 0.45)",
-  validHighlightBorder: "#7B5E9E",
-  ripple: "rgba(255,255,255,0.5)",
-  drawer: "#E8E2EC",
+  surfaceElevated: "#F8F5FC",
+  text: "#1A1520",
+  textMuted: "#5A5166",
+  border: "#D4C8E0",
+  gridLine: "#C2B2D4",
+  cellEmpty: "#E8E0F0",
+  cellFilled: "#B8A8C8",
+  // Piece colors – saturated and distinct
+  coral: "#E85D4D",
+  mint: "#3DB86B",
+  sky: "#3D8FD4",
+  lavender: "#8B5EB8",
+  peach: "#E89A2E",
+  sage: "#5A9B4A",
+  rose: "#D84A5A",
+  sand: "#C49240",
+  // UI – bold purple, drawer
+  primary: "#6B4C9E",
+  primaryPressed: "#5A3D8A",
+  primaryGlow: "rgba(107, 76, 158, 0.35)",
+  danger: "#C44C4C",
+  validHighlight: "rgba(107, 76, 158, 0.5)",
+  validHighlightBorder: "#6B4C9E",
+  ripple: "rgba(255,255,255,0.6)",
+  drawer: "#E0D6EC",
+  drawerBorder: "#C9B8DC",
 } as const;
 
 export const pieceColorKeys = [
@@ -56,13 +58,15 @@ export const borderRadius = {
   sm: 6,
   md: 10,
   lg: 16,
+  xl: 20,
   full: 9999,
 } as const;
 
 export const typography = {
-  title: { fontSize: 24, fontWeight: "600" as const },
+  display: { fontSize: 36, fontWeight: "700" as const },
+  title: { fontSize: 26, fontWeight: "700" as const },
   header: { fontSize: 18, fontWeight: "600" as const },
-  body: { fontSize: 16, fontWeight: "400" as const },
-  caption: { fontSize: 14, fontWeight: "400" as const },
-  button: { fontSize: 16, fontWeight: "600" as const },
+  body: { fontSize: 16, fontWeight: "500" as const },
+  caption: { fontSize: 14, fontWeight: "500" as const },
+  button: { fontSize: 16, fontWeight: "700" as const },
 };

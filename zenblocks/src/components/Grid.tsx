@@ -268,10 +268,15 @@ const styles = StyleSheet.create({
   gridWrap: {
     position: "absolute",
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    borderWidth: 2,
     borderColor: colors.gridLine,
     overflow: "hidden",
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   rippleBlock: {
     position: "absolute",
@@ -289,11 +294,11 @@ const styles = StyleSheet.create({
   block: {
     position: "absolute",
     borderRadius: borderRadius.sm,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowColor: "#1A1520",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
   },
 });
 

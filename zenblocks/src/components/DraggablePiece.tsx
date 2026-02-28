@@ -13,7 +13,7 @@ import { PieceView } from "./Piece";
 import type { Piece } from "../game/levelGenerator";
 import { TRAY_CELL_SIZE, TRAY_HIT_SLOP } from "./PieceTray";
 
-/** Small movement to start drag (no long-press now that tray has no ScrollView). */
+/** Small movement to start drag; works with Gesture Handler ScrollView in the tray. */
 const MIN_DRAG_DISTANCE = 8;
 
 type DraggablePieceProps = {

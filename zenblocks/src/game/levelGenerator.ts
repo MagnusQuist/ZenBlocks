@@ -6,18 +6,14 @@ import type { Shape } from "./shapes";
 import { allRotations } from "./shapeRotations";
 import {
   createEmptyGrid,
-  getOccupiedCells,
   getAbsoluteOccupied,
   isValidPlacement,
   applyPlacement,
   clearPlacement,
 } from "./gridUtils";
-import {
-  getGridSizeForLevel,
-  getTiersForLevel,
-  getShapesForTier,
-  type Tier,
-} from "./difficultyCurve";
+
+import { getGridSizeForLevel, getGeneratorConfig } from "./difficultyCurve";
+import { SHAPES_BY_ID, TIER_1_SHAPES } from "./shapes";
 
 export type Piece = {
   pieceId: string;
@@ -44,6 +40,45 @@ function nextPieceId(): string {
   return `p_${++pieceIdCounter}`;
 }
 
+function buildWeightedCandidates(weights: Record<string, number>): Shape[] {
+  const out: Shape[] = [];
+  for (const [shapeId, w] of Object.entries(weights)) {
+    const shape = SHAPES_BY_ID[shapeId];
+    if (!shape) continue;
+    for (let i = 0; i < w; i++) out.push(shape);
+  }
+  return out;
+}
+
+function filterByGridSize(shape: Shape, gridSize: number): boolean {
+  const h = shape.cells.length;
+  const w = shape.cells[0]?.length ?? 0;
+  return h <= gridSize && w <= gridSize;
+}
+
+function countSingles(
+  placed: Array<{ shape: Shape; cells: number[][]; occupied: { r: number; c: number }[] }>
+): number {
+  return placed.reduce((acc, p) => acc + (p.shape.unitCount === 1 ? 1 : 0), 0);
+}
+
+function countByShapeId(
+  placed: Array<{ shape: Shape; cells: number[][]; occupied: { r: number; c: number }[] }>
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const p of placed) out[p.shape.id] = (out[p.shape.id] ?? 0) + 1;
+  return out;
+}
+
+function countIrregular(byId: Record<string, number>): number {
+  const IRREGULAR = ["t", "z", "step", "plus", "extended-t", "long-l"];
+  return IRREGULAR.reduce((sum, id) => sum + (byId[id] ?? 0), 0);
+}
+
+function nowMs(): number {
+  return typeof performance !== "undefined" ? performance.now() : Date.now();
+}
+
 /** Top-left first empty cell, or null if grid full */
 function findFirstEmpty(grid: number[][], size: number): { r: number; c: number } | null {
   for (let r = 0; r < size; r++) {
@@ -54,7 +89,7 @@ function findFirstEmpty(grid: number[][], size: number): { r: number; c: number 
   return null;
 }
 
-/** Try to place one shape at (r, c); returns occupied cells if valid, else null */
+/** Try to place one shape at anchor; returns occupied cells if valid, else null */
 function tryPlace(
   grid: number[][],
   size: number,
@@ -62,53 +97,66 @@ function tryPlace(
   anchor: { r: number; c: number }
 ): { r: number; c: number }[] | null {
   const occupied = getAbsoluteOccupied(cells, anchor);
+
+  // Ensure we actually fill the first empty cell, otherwise cavities happen.
+  if (!occupied.some((p) => p.r === anchor.r && p.c === anchor.c)) return null;
+
   if (!isValidPlacement(size, grid, occupied)) return null;
   return occupied;
 }
 
-const MAX_BACKTRACK = 500;
+const MAX_BACKTRACK = 250;
 
-/** Tiling fill: place shapes until grid is full. Prefers larger pieces (fewer total), then variety as tiebreaker. */
+/** Tiling fill: place shapes until grid is full (time-boxed). */
 function tilingFill(
   grid: number[][],
   size: number,
-  candidateShapes: Shape[]
+  candidateShapes: Shape[],
+  deadlineMs: number
 ): Array<{ shape: Shape; cells: number[][]; occupied: { r: number; c: number }[] }> | null {
   const placed: Array<{
     shape: Shape;
     cells: number[][];
     occupied: { r: number; c: number }[];
   }> = [];
+
   const usageByShapeId = new Map<string, number>();
   let backtrackCount = 0;
 
-  function getCandidatesOrdered(): Shape[] {
-    return [...candidateShapes].sort((a, b) => {
-      if (a.unitCount !== b.unitCount) return b.unitCount - a.unitCount;
-      const useA = usageByShapeId.get(a.id) ?? 0;
-      const useB = usageByShapeId.get(b.id) ?? 0;
-      return useA - useB;
-    });
-  }
+  let steps = 0;
+  const MAX_STEPS = size * size * 200;
 
   while (backtrackCount < MAX_BACKTRACK) {
+    if (nowMs() > deadlineMs) return null;
+    if (++steps > MAX_STEPS) return null;
+
     const anchor = findFirstEmpty(grid, size);
     if (!anchor) return placed;
 
     let placedOne = false;
-    for (const shape of getCandidatesOrdered()) {
+    const SHAPE_TRIES_PER_STEP = 18;
+
+    for (let t = 0; t < SHAPE_TRIES_PER_STEP; t++) {
+      const shape = candidateShapes[Math.floor(Math.random() * candidateShapes.length)];
+      const used = usageByShapeId.get(shape.id) ?? 0;
+
+      // Light variety control
+      if (used >= 6 && Math.random() < 0.6) continue;
+
       const rotations = allRotations(shape.cells);
       const shuffledRotations = [...rotations].sort(() => Math.random() - 0.5);
+
       for (const cells of shuffledRotations) {
         const occupied = tryPlace(grid, size, cells, anchor);
-        if (occupied) {
-          applyPlacement(grid, occupied, 1);
-          placed.push({ shape, cells, occupied });
-          usageByShapeId.set(shape.id, (usageByShapeId.get(shape.id) ?? 0) + 1);
-          placedOne = true;
-          break;
-        }
+        if (!occupied) continue;
+
+        applyPlacement(grid, occupied, 1);
+        placed.push({ shape, cells, occupied });
+        usageByShapeId.set(shape.id, used + 1);
+        placedOne = true;
+        break;
       }
+
       if (placedOne) break;
     }
 
@@ -124,6 +172,7 @@ function tilingFill(
       backtrackCount = 0;
     }
   }
+
   return null;
 }
 
@@ -162,27 +211,74 @@ export function generateLevel(levelNumber: number): {
   pieces: Piece[];
 } {
   pieceIdCounter = 0;
-  const gridSize = getGridSizeForLevel(levelNumber);
-  const tiers = getTiersForLevel(levelNumber);
-  const tier = tiers[tiers.length - 1] ?? 1;
-  const candidateShapes = [...getShapesForTier(tier)].sort(
-    (a, b) => b.unitCount - a.unitCount
-  );
 
-  for (let attempt = 0; attempt < 50; attempt++) {
-    const grid = createEmptyGrid(gridSize);
-    const placed = tilingFill(grid, gridSize, candidateShapes);
-    if (placed && placed.length > 0) {
+  const gridSize = getGridSizeForLevel(levelNumber);
+  const cfg = getGeneratorConfig(levelNumber);
+
+  const candidateShapes = buildWeightedCandidates(cfg.weights)
+    .filter((s) => filterByGridSize(s, gridSize));
+
+  // Safety: if something went wrong with weights/shape IDs
+  if (candidateShapes.length === 0) {
+    const fallbackGrid = createEmptyGrid(4);
+    const placed = tilingFill(fallbackGrid, 4, [...TIER_1_SHAPES], nowMs() + 30);
+    const pieces = placed ? shuffle(toPieces(placed)) : [];
+    return { gridSize: 4, grid: createEmptyGrid(4), pieces };
+  }
+
+  // Prevent UI freezes: time-box generation and progressively relax constraints.
+  const start = nowMs();
+  const TIME_BUDGET_MS = 80;
+  const deadlineMsBase = start + TIME_BUDGET_MS;
+
+  const phases = [
+    { piecesFactorBoost: 0.0, irregularBoost: 0, dominoBoost: 0, singlesBoost: 0 },
+    { piecesFactorBoost: 0.04, irregularBoost: 1, dominoBoost: 1, singlesBoost: 0 },
+    { piecesFactorBoost: 0.08, irregularBoost: 2, dominoBoost: 2, singlesBoost: 1 },
+  ];
+
+  for (const phase of phases) {
+    for (let attempt = 0; attempt < 80; attempt++) {
+      if (nowMs() > deadlineMsBase) break;
+
+      // cap each attempt so a single tilingFill can't hang
+      const deadlineMs = Math.min(deadlineMsBase, nowMs() + 20);
+
+      const grid = createEmptyGrid(gridSize);
+      const placed = tilingFill(grid, gridSize, candidateShapes, deadlineMs);
+      if (!placed || placed.length === 0) continue;
+
+      const byId = countByShapeId(placed);
+      const singles = countSingles(placed);
+      const irregular = countIrregular(byId);
+      const dominoCount = byId["domino"] ?? 0;
+
+      const hasRequired =
+        cfg.requireOneOf.length === 0 ||
+        cfg.requireOneOf.some((id) => (byId[id] ?? 0) > 0);
+
+      const maxPieces = Math.ceil(
+        gridSize * gridSize * (cfg.maxPiecesFactor + phase.piecesFactorBoost)
+      );
+      const maxSingles = cfg.maxSingles + phase.singlesBoost;
+      const maxIrregular = cfg.maxIrregular + phase.irregularBoost;
+      const maxDomino = cfg.maxDomino + phase.dominoBoost;
+
+      if (!hasRequired) continue;
+      if (singles > maxSingles) continue;
+      if (placed.length > maxPieces) continue;
+      if (irregular > maxIrregular) continue;
+      if (dominoCount > maxDomino) continue;
+
       const pieces = shuffle(toPieces(placed));
-      const emptyGrid = createEmptyGrid(gridSize);
-      return { gridSize, grid: emptyGrid, pieces };
+      return { gridSize, grid: createEmptyGrid(gridSize), pieces };
     }
   }
 
-  // Fallback: minimal level
-  const grid = createEmptyGrid(4);
-  const fallbackShapes = getShapesForTier(1);
-  const placed = tilingFill(grid, 4, fallbackShapes);
-  const pieces = placed ? shuffle(toPieces(placed)) : [];
+  // Fallback: generate a simple 4x4 Tier-1 level quickly (never freeze)
+  const fallbackGrid = createEmptyGrid(4);
+  const fallbackCandidates = [...TIER_1_SHAPES];
+  const fallbackPlaced = tilingFill(fallbackGrid, 4, fallbackCandidates, nowMs() + 40);
+  const pieces = fallbackPlaced ? shuffle(toPieces(fallbackPlaced)) : [];
   return { gridSize: 4, grid: createEmptyGrid(4), pieces };
 }

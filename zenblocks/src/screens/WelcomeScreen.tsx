@@ -54,17 +54,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: {
-    fontSize: 32,
-    fontWeight: "600",
-    color: colors.text,
+    ...typography.display,
+    color: colors.primary,
     marginBottom: spacing.xl,
+    textShadowColor: "rgba(107, 76, 158, 0.2)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
   },
   playBtn: {
     backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.md + 4,
     paddingHorizontal: spacing.xl * 2,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xl,
     marginBottom: spacing.xl,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
   playBtnText: {
     ...typography.button,
@@ -81,6 +88,7 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   settingsIcon: {
-    fontSize: 24,
+    fontSize: 26,
+    color: colors.primary,
   },
 });

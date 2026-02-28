@@ -60,11 +60,11 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   backText: {
-    fontSize: 22,
-    color: colors.text,
+    fontSize: 24,
+    color: colors.primary,
   },
   title: {
     ...typography.header,
-    color: colors.text,
+    color: colors.primary,
   },
 });
