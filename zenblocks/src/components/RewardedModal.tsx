@@ -8,15 +8,21 @@ import { colors, spacing, borderRadius, typography } from "../theme";
 
 type RewardedModalProps = {
   visible: boolean;
-  purpose: "undo" | "skip" | null;
+  purpose: "undo" | "skip" | "hint" | null;
   onWatch: () => void;
   onDismiss: () => void;
+};
+
+const PURPOSE_TITLES: Record<NonNullable<RewardedModalProps["purpose"]>, string> = {
+  undo: "Watch ad to undo",
+  skip: "Watch ad to skip level",
+  hint: "Watch ad for a hint",
 };
 
 export function RewardedModal({ visible, purpose, onWatch, onDismiss }: RewardedModalProps) {
   if (!purpose) return null;
 
-  const title = purpose === "undo" ? "Watch ad to undo" : "Watch ad to skip level";
+  const title = PURPOSE_TITLES[purpose];
 
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -40,7 +46,7 @@ export function RewardedModal({ visible, purpose, onWatch, onDismiss }: Rewarded
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(26, 21, 32, 0.5)",
+    backgroundColor: "rgba(7, 8, 20, 0.88)",
     justifyContent: "center",
     alignItems: "center",
     padding: spacing.lg,

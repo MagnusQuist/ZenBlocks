@@ -11,6 +11,7 @@ import Animated, {
   withTiming,
   Easing,
   runOnJS,
+  type SharedValue,
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, typography, borderRadius } from "../theme";
@@ -31,8 +32,10 @@ type StreakBadgeProps = {
   streak: number;
   /** Optional variant for slightly different sizing (e.g. welcome vs header). */
   variant?: "default" | "compact";
-  /** When true, play flame burst (e.g. when streak just reached 3 or increased). Set by parent. */
+  /** When true, play flame burst (e.g. when streak just reached 2 or increased). Set by parent. */
   animateFlame?: boolean;
+  /** When true, no flame/poof particles or animations (e.g. welcome screen where they're never seen). */
+  staticDisplay?: boolean;
   /** When true, play poof-out animation then call onPoofComplete. Badge shows with displayStreak. */
   poofOut?: boolean;
   /** Streak value to display when poofOut (last known streak). */
@@ -45,6 +48,7 @@ export function StreakBadge({
   streak,
   variant = "default",
   animateFlame = false,
+  staticDisplay = false,
   poofOut = false,
   displayStreak,
   onPoofComplete,
@@ -56,13 +60,13 @@ export function StreakBadge({
   const showValue = poofOut ? (displayStreak ?? streak) : streak;
   const isCompact = variant === "compact";
 
-  // Flame burst when parent says "just reached streak" (animateFlame) or when streak increases
+  // Flame burst when parent says "just reached streak" (animateFlame) or when streak increases (skip if static)
   useEffect(() => {
-    if (poofOut) return;
+    if (poofOut || staticDisplay) return;
     const prev = prevStreakRef.current;
     const parentTriggeredFlame = animateFlame;
-    const streakIncreased = prev !== null && prev >= 3 && streak > prev;
-    const shouldAnimate = (streak >= 3 && parentTriggeredFlame) || streakIncreased;
+    const streakIncreased = prev !== null && prev >= 2 && streak > prev;
+    const shouldAnimate = (streak >= 2 && parentTriggeredFlame) || streakIncreased;
 
     prevStreakRef.current = streak;
 
@@ -73,11 +77,11 @@ export function StreakBadge({
         easing: Easing.out(Easing.cubic),
       });
     }
-  }, [streak, animateFlame, poofOut, progress]);
+  }, [streak, animateFlame, poofOut, staticDisplay, progress]);
 
   // Poof-out when poofOut becomes true
   useEffect(() => {
-    if (!poofOut || !onPoofComplete) return;
+    if (!poofOut || !onPoofComplete || staticDisplay) return;
     poofProgress.value = 0;
     poofProgress.value = withTiming(
       1,
@@ -89,7 +93,7 @@ export function StreakBadge({
         if (finished) runOnJS(onPoofComplete)();
       }
     );
-  }, [poofOut, onPoofComplete, poofProgress]);
+  }, [poofOut, onPoofComplete, staticDisplay, poofProgress]);
 
   const pillAnimatedStyle = useAnimatedStyle(() => {
     "worklet";
@@ -108,7 +112,7 @@ export function StreakBadge({
         <Text style={[styles.text, isCompact && styles.textCompact]}>{showValue}</Text>
       </Animated.View>
 
-      {!poofOut && (
+      {!poofOut && !staticDisplay && (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           {Array.from({ length: PARTICLE_COUNT }).map((_, i) => (
             <FlameParticle key={i} index={i} progress={progress} />
@@ -116,7 +120,7 @@ export function StreakBadge({
         </View>
       )}
 
-      {poofOut && (
+      {poofOut && !staticDisplay && (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           {Array.from({ length: POOF_PARTICLE_COUNT }).map((_, i) => (
             <PoofParticle key={i} index={i} progress={poofProgress} />
@@ -132,7 +136,7 @@ function FlameParticle({
   progress,
 }: {
   index: number;
-  progress: Animated.SharedValue<number>;
+  progress: SharedValue<number>;
 }) {
   const angle = (index / PARTICLE_COUNT) * Math.PI * 2 - Math.PI / 2;
   const color = FLAME_COLORS[index % FLAME_COLORS.length];
@@ -172,7 +176,7 @@ function PoofParticle({
   progress,
 }: {
   index: number;
-  progress: Animated.SharedValue<number>;
+  progress: SharedValue<number>;
 }) {
   const angle = (index / POOF_PARTICLE_COUNT) * Math.PI * 2 + index * 0.3;
   const spreadX = Math.cos(angle) * POOF_SPREAD;

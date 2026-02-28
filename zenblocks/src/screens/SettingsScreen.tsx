@@ -12,6 +12,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useGameStore } from "../state/gameStore";
+import { TITLE_MILESTONES } from "../data/titleUnlocks";
 import { colors, spacing, typography, borderRadius } from "../theme";
 
 function Row({
@@ -59,6 +60,11 @@ export default function SettingsScreen() {
   const hapticsEnabled = useGameStore((s) => s.settings.hapticsEnabled);
   const setSoundEnabled = useGameStore((s) => s.setSoundEnabled);
   const setHapticsEnabled = useGameStore((s) => s.setHapticsEnabled);
+  const totalScore = useGameStore((s) => s.totalScore);
+  const seenTitleIds = useGameStore((s) => s.seenTitleIds);
+  const newUnlocksCount = TITLE_MILESTONES.filter(
+    (t) => totalScore >= t.requiredScore && !seenTitleIds.includes(t.id)
+  ).length;
 
   return (
     <View
@@ -130,6 +136,22 @@ export default function SettingsScreen() {
 
       <View style={styles.card}>
         <Row
+          icon="trophy"
+          label="Unlocks"
+          right={
+            newUnlocksCount > 0 ? (
+              <View style={styles.badgeWrap}>
+                <Text style={styles.badgeText}>{newUnlocksCount}</Text>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </View>
+            ) : (
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            )
+          }
+          onPress={() => router.push("/unlocks")}
+        />
+        <View style={styles.divider} />
+        <Row
           icon="shield-checkmark"
           label="Privacy"
           onPress={() => {
@@ -148,7 +170,7 @@ export default function SettingsScreen() {
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>Neon Blocks</Text>
-        <Text style={styles.footerMuted}>Neon Night</Text>
+        <Text style={styles.footerMuted}>QH Studios</Text>
       </View>
     </View>
   );
@@ -249,6 +271,24 @@ const styles = StyleSheet.create({
   rowRight: {
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+
+  badgeWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.rose,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: borderRadius.full,
+  },
+  badgeText: {
+    ...typography.caption,
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#fff",
+    marginRight: 4,
   },
 
   divider: {

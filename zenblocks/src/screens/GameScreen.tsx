@@ -3,12 +3,13 @@
  * Neon Night styling layer.
  */
 
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 
+import { useShallow } from "zustand/react/shallow";
 import { useGameStore } from "../state/gameStore";
 import type { GridLayout } from "../components/Grid";
 import { Grid } from "../components/Grid";
@@ -19,7 +20,9 @@ import { DraggablePiece } from "../components/DraggablePiece";
 import { FailureModal } from "../components/FailureModal";
 import { RewardedModal } from "../components/RewardedModal";
 import { Confetti } from "../components/Confetti";
+import { CompletionScoreOverlay } from "../components/CompletionScoreOverlay";
 import { getAbsoluteOccupied, isValidPlacement } from "../game/gridUtils";
+import { findHintFromStoredSolution } from "../game/hintFromSolution";
 import type { Piece } from "../game/levelGenerator";
 import { colors, spacing, typography, borderRadius } from "../theme";
 import { MockAdsService } from "../services/ads";
@@ -97,10 +100,10 @@ function findBestAnchor(
 }
 
 export default function GameScreen() {
-  const levelState = useGameStore((s) => s.levelState);
+  const levelState = useGameStore(useShallow((s) => s.levelState));
   const currentLevelNumber = useGameStore((s) => s.currentLevelNumber);
   const consecutiveNoUndoCompletions = useGameStore((s) => s.consecutiveNoUndoCompletions);
-  const settings = useGameStore((s) => s.settings);
+  const settings = useGameStore(useShallow((s) => s.settings));
 
   const placePiece = useGameStore((s) => s.placePiece);
   const undo = useGameStore((s) => s.undo);
@@ -117,6 +120,15 @@ export default function GameScreen() {
   const rewardedModalPurpose = useGameStore((s) => s.rewardedModalPurpose);
   const interstitialVisible = useGameStore((s) => s.interstitialVisible);
   const dismissInterstitial = useGameStore((s) => s.dismissInterstitial);
+  const completionOverlayVisible = useGameStore((s) => s.completionOverlayVisible);
+  const completionOverlayData = useGameStore(useShallow((s) => s.completionOverlayData));
+  const dismissCompletionOverlay = useGameStore((s) => s.dismissCompletionOverlay);
+  const freeHintUsedThisLevel = useGameStore((s) => s.freeHintUsedThisLevel);
+  const adHintsEarnedThisLevel = useGameStore((s) => s.adHintsEarnedThisLevel);
+  const hintPlacement = useGameStore((s) => s.hintPlacement);
+  const consumeHint = useGameStore((s) => s.useHint);
+  const grantHintFromAd = useGameStore((s) => s.grantHintFromAd);
+  const setHintPlacement = useGameStore((s) => s.setHintPlacement);
 
   const [gridLayout, setGridLayout] = useState<GridLayout | null>(null);
   const gridLayoutRef = useRef<GridLayout | null>(null);
@@ -124,7 +136,7 @@ export default function GameScreen() {
 
   const [draggingPiece, setDraggingPiece] = useState<Piece | null>(null);
   const [dragScreenPosition, setDragScreenPosition] = useState<{ x: number; y: number } | null>(null);
-  const [highlightCells, setHighlightCells] = useState<Array<{ r: number; c: number }>>([]);
+  const [dragHighlightCells, setDragHighlightCells] = useState<{ r: number; c: number }[]>([]);
 
   const containerWindow = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const containerSize = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
@@ -136,8 +148,20 @@ export default function GameScreen() {
   const ghostScale = useSharedValue(1);
   const ghostAnimatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: ghostScale.value }] }));
 
+  const hintHighlightCells = useMemo(() => {
+    if (!levelState || !hintPlacement) return [];
+    const piece = levelState.remainingPieces.find((p) => p.pieceId === hintPlacement.pieceId);
+    if (!piece) return [];
+    return getAbsoluteOccupied(piece.cells, hintPlacement.topLeft);
+  }, [levelState, hintPlacement]);
+
+  const highlightCells =
+    dragHighlightCells.length > 0 ? dragHighlightCells : hintHighlightCells;
+
   const [showCompletionRipple, setShowCompletionRipple] = useState(false);
   const insets = useSafeAreaInsets();
+
+  const hintsRemaining = (freeHintUsedThisLevel ? 0 : 1) + adHintsEarnedThisLevel;
 
   const handlePlacementResult = useCallback(
     (success: boolean) => {
@@ -158,13 +182,13 @@ export default function GameScreen() {
           }, 1500);
         } else {
           const failed = checkFailure();
-          if (!failed) setHighlightCells([]);
+          if (!failed) setDragHighlightCells([]);
         }
       }
 
       setDraggingPiece(null);
       setDragScreenPosition(null);
-      setHighlightCells([]);
+      setDragHighlightCells([]);
     },
     [settings, checkFailure, completeLevel]
   );
@@ -174,15 +198,15 @@ export default function GameScreen() {
       const layout = gridLayoutRef.current;
       const ghostCell = layout ? screenToGridUnclamped(layout, ghostCenterX, ghostCenterY) : null;
       if (!ghostCell || !draggingPiece || !levelState) {
-        setHighlightCells([]);
+        setDragHighlightCells([]);
         return;
       }
       const anchor = findBestAnchor(levelState.gridSize, levelState.grid, draggingPiece, ghostCell);
       if (!anchor) {
-        setHighlightCells([]);
+        setDragHighlightCells([]);
         return;
       }
-      setHighlightCells(getAbsoluteOccupied(draggingPiece.cells, anchor));
+      setDragHighlightCells(getAbsoluteOccupied(draggingPiece.cells, anchor));
     },
     [draggingPiece, levelState]
   );
@@ -300,6 +324,37 @@ export default function GameScreen() {
     else onRewardedDismiss();
   }, [onRewardedComplete, onRewardedDismiss]);
 
+  const handleHintPress = useCallback(() => {
+    const state = useGameStore.getState().levelState;
+    if (!state || state.remainingPieces.length === 0) return;
+
+    if (!consumeHint()) {
+      setRewardedModalPurpose("hint");
+      return;
+    }
+
+    const placement = findHintFromStoredSolution(
+      state.gridSize,
+      state.grid,
+      state.remainingPieces,
+      state.solution
+    );
+
+    if (placement) {
+      setHintPlacement(placement);
+      if (settings.hapticsEnabled) haptics.notificationTick();
+      if (settings.soundEnabled) sound.playUndo();
+    } else {
+      setHintPlacement(null);
+    }
+  }, [consumeHint, setHintPlacement, setRewardedModalPurpose, settings]);
+
+  const handleWatchAdForHint = useCallback(async () => {
+    const result = await MockAdsService.showRewarded();
+    if (result === "completed") grantHintFromAd();
+    onRewardedDismiss();
+  }, [grantHintFromAd, onRewardedDismiss]);
+
   const onContainerLayout = useCallback((e: { nativeEvent: { layout: { width: number; height: number } } }) => {
     const { width, height } = e.nativeEvent.layout;
     containerSize.current = { width, height };
@@ -328,7 +383,9 @@ export default function GameScreen() {
 
   const undosRemaining = levelState.undosRemaining;
   const canUndo = levelState.placedPlacements.length > 0;
-  const undoDisabled = !canUndo && undosRemaining === 0;
+  const undoDisabled = !canUndo;
+  const hasRemainingPieces = levelState.remainingPieces.length > 0;
+  const hintDisabled = !hasRemainingPieces;
 
   return (
     <View style={styles.container} ref={containerRef} onLayout={onContainerLayout}>
@@ -372,6 +429,17 @@ export default function GameScreen() {
               Undo {undosRemaining > 0 ? `(${undosRemaining})` : ""}
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.hintBtn, hintDisabled && styles.hintBtnDisabled]}
+            onPress={handleHintPress}
+            disabled={hintDisabled}
+            activeOpacity={0.9}
+          >
+            <Ionicons name="bulb" size={16} color={hintDisabled ? colors.textMuted : colors.primary} />
+            <Text style={[styles.hintText, hintDisabled && styles.hintTextDisabled]}>
+              Hint {hintsRemaining > 0 ? `(${hintsRemaining})` : ""}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -402,6 +470,12 @@ export default function GameScreen() {
       </View>
 
       <Confetti visible={showCompletionRipple} />
+
+      <CompletionScoreOverlay
+        visible={completionOverlayVisible}
+        data={completionOverlayData}
+        onDismiss={dismissCompletionOverlay}
+      />
 
       {/* Ghost piece */}
       {draggingPiece && gridLayout && dragScreenPosition && (
@@ -443,7 +517,9 @@ export default function GameScreen() {
             ? handleWatchAdForUndo
             : rewardedModalPurpose === "skip"
               ? handleSkipWatchAd
-              : () => { }
+              : rewardedModalPurpose === "hint"
+                ? handleWatchAdForHint
+                : () => { }
         }
         onDismiss={onRewardedDismiss}
       />
@@ -502,7 +578,10 @@ const styles = StyleSheet.create({
   },
 
   actionsRow: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.md,
     paddingBottom: spacing.md,
   },
 
@@ -535,6 +614,28 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
 
+  hintBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: spacing.sm + 6,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.full,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+  },
+  hintText: {
+    ...typography.button,
+    color: colors.primary,
+  },
+  hintBtnDisabled: {
+    opacity: 0.6,
+  },
+  hintTextDisabled: {
+    color: colors.textMuted,
+  },
+
   drawer: {
     paddingLeft: spacing.md,
     paddingRight: spacing.md,
@@ -560,18 +661,18 @@ const styles = StyleSheet.create({
 
   interstitialOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(7,8,20,0.72)",
+    backgroundColor: "rgba(7,8,20,0.88)",
     justifyContent: "center",
     alignItems: "center",
   },
   interstitialCard: {
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "rgba(18, 22, 58, 0.95)",
     borderRadius: borderRadius.xl,
     padding: spacing.xl,
     minWidth: 280,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
+    borderColor: "rgba(255,255,255,0.14)",
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 14 },
     shadowOpacity: 0.18,

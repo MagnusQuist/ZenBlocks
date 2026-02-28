@@ -1,5 +1,6 @@
 /**
  * Solvable level generation by tiling: fill grid with pieces, then shuffle for tray.
+ * Returns solution (ordered placements) for hint-from-stored-solution.
  */
 
 import type { Shape } from "./shapes";
@@ -14,6 +15,7 @@ import {
 
 import { getGridSizeForLevel, getGeneratorConfig } from "./difficultyCurve";
 import { SHAPES_BY_ID, TIER_1_SHAPES } from "./shapes";
+import type { SolutionPlacement } from "./solution";
 
 export type Piece = {
   pieceId: string;
@@ -186,7 +188,7 @@ function shuffle<T>(arr: T[]): T[] {
   return out;
 }
 
-/** Build Piece[] from tiling result with color keys */
+/** Build Piece[] from tiling result with color keys (same order as placed). */
 function toPieces(
   placed: Array<{ shape: Shape; cells: number[][]; occupied: { r: number; c: number }[] }>
 ): Piece[] {
@@ -204,11 +206,31 @@ function toPieces(
   });
 }
 
+/** Build solution from placed (tiling order) and pieces (same index order). */
+function toSolution(
+  placed: Array<{ shape: Shape; cells: number[][]; occupied: { r: number; c: number }[] }>,
+  pieces: Piece[]
+): SolutionPlacement[] {
+  if (placed.length !== pieces.length) return [];
+  return placed.map((pl, i) => {
+    const topLeft = {
+      r: Math.min(...pl.occupied.map((o) => o.r)),
+      c: Math.min(...pl.occupied.map((o) => o.c)),
+    };
+    return {
+      pieceId: pieces[i].pieceId,
+      topLeft,
+      cells: pl.cells,
+    };
+  });
+}
+
 /** Generate a solvable level for the given level number */
 export function generateLevel(levelNumber: number): {
   gridSize: number;
   grid: number[][];
   pieces: Piece[];
+  solution: SolutionPlacement[];
 } {
   pieceIdCounter = 0;
 
@@ -218,12 +240,16 @@ export function generateLevel(levelNumber: number): {
   const candidateShapes = buildWeightedCandidates(cfg.weights)
     .filter((s) => filterByGridSize(s, gridSize));
 
+  const emptySolution: SolutionPlacement[] = [];
+
   // Safety: if something went wrong with weights/shape IDs
   if (candidateShapes.length === 0) {
     const fallbackGrid = createEmptyGrid(4);
     const placed = tilingFill(fallbackGrid, 4, [...TIER_1_SHAPES], nowMs() + 30);
-    const pieces = placed ? shuffle(toPieces(placed)) : [];
-    return { gridSize: 4, grid: createEmptyGrid(4), pieces };
+    const piecesOrdered = placed ? toPieces(placed) : [];
+    const solution = placed ? toSolution(placed, piecesOrdered) : emptySolution;
+    const pieces = shuffle(piecesOrdered);
+    return { gridSize: 4, grid: createEmptyGrid(4), pieces, solution };
   }
 
   // Prevent UI freezes: time-box generation and progressively relax constraints.
@@ -270,8 +296,10 @@ export function generateLevel(levelNumber: number): {
       if (irregular > maxIrregular) continue;
       if (dominoCount > maxDomino) continue;
 
-      const pieces = shuffle(toPieces(placed));
-      return { gridSize, grid: createEmptyGrid(gridSize), pieces };
+      const piecesOrdered = toPieces(placed);
+      const solution = toSolution(placed, piecesOrdered);
+      const pieces = shuffle(piecesOrdered);
+      return { gridSize, grid: createEmptyGrid(gridSize), pieces, solution };
     }
   }
 
@@ -279,6 +307,8 @@ export function generateLevel(levelNumber: number): {
   const fallbackGrid = createEmptyGrid(4);
   const fallbackCandidates = [...TIER_1_SHAPES];
   const fallbackPlaced = tilingFill(fallbackGrid, 4, fallbackCandidates, nowMs() + 40);
-  const pieces = fallbackPlaced ? shuffle(toPieces(fallbackPlaced)) : [];
-  return { gridSize: 4, grid: createEmptyGrid(4), pieces };
+  const fallbackPiecesOrdered = fallbackPlaced ? toPieces(fallbackPlaced) : [];
+  const fallbackSolution = fallbackPlaced ? toSolution(fallbackPlaced, fallbackPiecesOrdered) : emptySolution;
+  const pieces = shuffle(fallbackPiecesOrdered);
+  return { gridSize: 4, grid: createEmptyGrid(4), pieces, solution: fallbackSolution };
 }

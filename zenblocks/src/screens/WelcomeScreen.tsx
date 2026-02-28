@@ -9,7 +9,7 @@
  * - Current level text
  */
 
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,6 +23,8 @@ import Animated, {
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, typography, borderRadius } from "../theme";
 import { useGameStore } from "../state/gameStore";
+import { getTitleById, getFirstUnlockScore } from "../data/titleUnlocks";
+import type { TitleMilestoneId } from "../data/titleUnlocks";
 import { StreakBadge } from "../components/StreakBadge";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
@@ -190,12 +192,87 @@ function MiniBoardPreview() {
   );
 }
 
+const SCORE_PULSE_DURATION = 2400;
+
+function AnimatedScoreValue({ score, insetsBottom }: { score: number; insetsBottom: number }) {
+  const pulse = useSharedValue(0);
+
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withTiming(1, {
+        duration: SCORE_PULSE_DURATION / 2,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      -1,
+      true
+    );
+  }, [pulse]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    const t = pulse.value;
+    return {
+      opacity: 0.88 + 0.12 * t,
+      transform: [{ scale: 1 + 0.05 * t }],
+    };
+  });
+
+  return (
+    <View
+      style={[
+        styles.scoreFooter,
+        { paddingBottom: insetsBottom + spacing.md },
+      ]}
+    >
+      <Text style={styles.scoreFooterLabel}>Score</Text>
+      <Animated.View style={animatedStyle}>
+        <Text style={styles.scoreFooterValue}>{score.toLocaleString()}</Text>
+      </Animated.View>
+    </View>
+  );
+}
+
+const TITLE_FLARE_DURATION = 2000;
+
+function AnimatedTitleFlare({ title }: { title: string }) {
+  const pulse = useSharedValue(0);
+
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withTiming(1, {
+        duration: TITLE_FLARE_DURATION / 2,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      -1,
+      true
+    );
+  }, [pulse]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    const t = pulse.value;
+    return {
+      opacity: 0.92 + 0.08 * t,
+      transform: [{ scale: 1 + 0.03 * t }],
+    };
+  });
+
+  return (
+    <Animated.View style={[styles.topBarTitleFlareWrap, animatedStyle]}>
+      <Text style={styles.topBarTitleFlareText} numberOfLines={1}>
+        {title}
+      </Text>
+    </Animated.View>
+  );
+}
+
 export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const currentLevel = useGameStore((s) => s.currentLevelNumber);
+  const totalScore = useGameStore((s) => s.totalScore);
+  const selectedTitleId = useGameStore((s) => s.selectedTitleId);
+  const selectedTitle = getTitleById(selectedTitleId as TitleMilestoneId | null);
   const streak = useGameStore((s) => s.consecutiveNoUndoCompletions);
-  const showStreak = streak >= 3;
+  const showStreak = streak >= 2;
 
   return (
     <View style={styles.root}>
@@ -214,16 +291,27 @@ export default function WelcomeScreen() {
       >
         <View style={styles.topBarLeft}>
           {showStreak ? (
-            <StreakBadge streak={streak} variant="compact" />
+            <StreakBadge streak={streak} variant="compact" staticDisplay />
           ) : (
             <View style={styles.topBarSpacer} />
           )}
         </View>
 
         <View style={styles.topBarCenter}>
-          <View style={styles.levelPill}>
-            <Text style={styles.levelPillText}>Level {currentLevel}</Text>
-          </View>
+          {selectedTitle ? (
+            <AnimatedTitleFlare title={selectedTitle.name} />
+          ) : (
+            <TouchableOpacity
+              style={styles.topBarUnlockHint}
+              onPress={() => router.push("/unlocks")}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="lock-closed" size={14} color={colors.textMuted} />
+              <Text style={styles.topBarUnlockHintText} numberOfLines={1}>
+                Score {getFirstUnlockScore().toLocaleString()} to unlock title
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.topBarRight}>
@@ -260,12 +348,26 @@ export default function WelcomeScreen() {
             onPress={() => router.push("/game")}
             activeOpacity={0.9}
           >
-            <Text style={styles.playBtnText}>Play</Text>
+            <View style={styles.playBtnContent}>
+              <Text style={styles.playBtnText}>Play</Text>
+              <Text style={styles.playBtnLevel}>Level {currentLevel}</Text>
+            </View>
             <Ionicons name="arrow-forward" size={18} color={"#081023"} />
           </TouchableOpacity>
 
-          <Text style={styles.hintText}>Resume from Level {currentLevel}</Text>
+          <TouchableOpacity
+            style={styles.unlocksBtn}
+            onPress={() => router.push("/unlocks")}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="trophy" size={22} color={colors.primary} />
+            <Text style={styles.unlocksBtnText}>Unlocks</Text>
+          </TouchableOpacity>
         </View>
+
+        {totalScore > 0 && (
+          <AnimatedScoreValue score={totalScore} insetsBottom={insets.bottom} />
+        )}
       </View>
     </View>
   );
@@ -304,18 +406,29 @@ const styles = StyleSheet.create({
     width: 54,
     alignItems: "flex-end",
   },
-  levelPill: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: borderRadius.full,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+  topBarTitleFlareWrap: {
+    alignItems: "center",
+    justifyContent: "center",
   },
-  levelPillText: {
+  topBarTitleFlareText: {
     ...typography.caption,
-    color: colors.text,
-    letterSpacing: 0.3,
+    fontSize: 16,
+    fontWeight: "800",
+    color: colors.accent,
+    letterSpacing: 0.5,
+    textShadowColor: colors.accentGlow,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
+  },
+  topBarUnlockHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  topBarUnlockHintText: {
+    ...typography.caption,
+    fontSize: 12,
+    color: colors.textMuted,
   },
 
   settingsBtn: {
@@ -425,9 +538,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderRadius: borderRadius.xl,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
     flexDirection: "row",
-    gap: 10,
 
     backgroundColor: colors.accent,
     shadowColor: colors.accent,
@@ -436,16 +548,68 @@ const styles = StyleSheet.create({
     shadowRadius: 22,
     elevation: 10,
   },
-
+  playBtnContent: {
+    alignItems: "flex-start",
+  },
   playBtnText: {
     ...typography.button,
     color: "#081023",
+  },
+  playBtnLevel: {
+    ...typography.caption,
+    fontSize: 12,
+    color: "rgba(8,16,35,0.75)",
+    marginTop: 2,
+  },
+
+  unlocksBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    marginTop: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.xl,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    maxWidth: 320,
+    alignSelf: "center",
+  },
+  unlocksBtnText: {
+    ...typography.body,
+    color: colors.text,
+    letterSpacing: 0.3,
   },
 
   hintText: {
     ...typography.caption,
     color: "rgba(234,240,255,0.55)",
     marginTop: spacing.md,
+  },
+
+  scoreFooter: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    paddingHorizontal: spacing.lg,
+  },
+  scoreFooterLabel: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginBottom: 2,
+  },
+  scoreFooterValue: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: colors.primary,
+    letterSpacing: 0.5,
+    textShadowColor: colors.primaryGlow,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
 
   floatPiece: {

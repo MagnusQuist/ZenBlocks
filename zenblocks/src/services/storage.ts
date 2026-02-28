@@ -10,6 +10,11 @@ const KEYS = {
   CURRENT_LEVEL: "@neonblocks/currentLevel",
   SETTINGS: "@neonblocks/settings",
   CONSECUTIVE_NO_UNDO: "@neonblocks/consecutiveNoUndo",
+  TOTAL_SCORE: "@neonblocks/totalScore",
+  BEST_TOTAL_SCORE: "@neonblocks/bestTotalScore",
+  BEST_LEVEL_SCORES: "@neonblocks/bestLevelScoreByLevelId",
+  SELECTED_TITLE_ID: "@neonblocks/selectedTitleId",
+  SEEN_TITLE_IDS: "@neonblocks/seenTitleIds",
 } as const;
 
 export type StoredSettings = {
@@ -71,6 +76,58 @@ export async function setConsecutiveNoUndoCompletions(count: number): Promise<vo
   await setItem(KEYS.CONSECUTIVE_NO_UNDO, String(Math.max(0, count)));
 }
 
+export type BestLevelScoreByLevelId = Record<number, number>;
+
+export async function getTotalScore(): Promise<number> {
+  try {
+    const s = await getItem(KEYS.TOTAL_SCORE);
+    if (s == null) return 0;
+    const n = parseInt(s, 10);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function setTotalScore(score: number): Promise<void> {
+  await setItem(KEYS.TOTAL_SCORE, String(Math.max(0, score)));
+}
+
+export async function getBestTotalScore(): Promise<number> {
+  try {
+    const s = await getItem(KEYS.BEST_TOTAL_SCORE);
+    if (s == null) return 0;
+    const n = parseInt(s, 10);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function setBestTotalScore(score: number): Promise<void> {
+  await setItem(KEYS.BEST_TOTAL_SCORE, String(Math.max(0, score)));
+}
+
+export async function getBestLevelScoreByLevelId(): Promise<BestLevelScoreByLevelId> {
+  try {
+    const s = await getItem(KEYS.BEST_LEVEL_SCORES);
+    if (!s) return {};
+    const parsed = JSON.parse(s) as Record<string, number>;
+    const out: BestLevelScoreByLevelId = {};
+    for (const [k, v] of Object.entries(parsed)) {
+      const id = parseInt(k, 10);
+      if (Number.isFinite(id) && Number.isFinite(v) && v >= 0) out[id] = v;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export async function setBestLevelScoreByLevelId(data: BestLevelScoreByLevelId): Promise<void> {
+  await setItem(KEYS.BEST_LEVEL_SCORES, JSON.stringify(data));
+}
+
 export async function getSettings(): Promise<StoredSettings> {
   try {
     const s = await getItem(KEYS.SETTINGS);
@@ -87,4 +144,32 @@ export async function getSettings(): Promise<StoredSettings> {
 
 export async function setSettings(settings: StoredSettings): Promise<void> {
   await setItem(KEYS.SETTINGS, JSON.stringify(settings));
+}
+
+export async function getSelectedTitleId(): Promise<string | null> {
+  try {
+    return await getItem(KEYS.SELECTED_TITLE_ID);
+  } catch {
+    return null;
+  }
+}
+
+export async function setSelectedTitleId(id: string | null): Promise<void> {
+  if (id) await setItem(KEYS.SELECTED_TITLE_ID, id);
+  else await setItem(KEYS.SELECTED_TITLE_ID, "");
+}
+
+export async function getSeenTitleIds(): Promise<string[]> {
+  try {
+    const s = await getItem(KEYS.SEEN_TITLE_IDS);
+    if (!s) return [];
+    const parsed = JSON.parse(s) as unknown;
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function setSeenTitleIds(ids: string[]): Promise<void> {
+  await setItem(KEYS.SEEN_TITLE_IDS, JSON.stringify(ids));
 }

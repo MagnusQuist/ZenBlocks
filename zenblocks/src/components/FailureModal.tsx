@@ -39,7 +39,7 @@ export function FailureModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(26, 21, 32, 0.5)",
+    backgroundColor: "rgba(7, 8, 20, 0.88)",
     justifyContent: "center",
     alignItems: "center",
     padding: spacing.lg,

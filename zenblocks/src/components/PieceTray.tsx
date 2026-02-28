@@ -1,6 +1,7 @@
 /**
  * Tray of remaining pieces.
- * Clean Neon Night shelf style (no double container).
+ * Horizontal scroll; padding so users can start scroll from empty space.
+ * Uses RNGH ScrollView so piece drag (vertical intent) can take over without fighting scroll.
  */
 
 import React from "react";
@@ -13,6 +14,9 @@ const TRAY_CELL_SIZE = 26;
 const TRAY_GAP = 4;
 
 export const TRAY_HIT_SLOP = 14;
+
+/** Horizontal padding so users can start scroll from empty space (not on a piece). */
+export const TRAY_HORIZONTAL_PADDING = spacing.lg;
 
 type PieceTrayProps = {
   pieces: Piece[];
@@ -27,6 +31,7 @@ export function PieceTray({ pieces, onPieceLayout, renderPiece }: PieceTrayProps
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        decelerationRate="fast"
       >
         {pieces.map((piece) => (
           <PieceSlot
@@ -84,7 +89,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: TRAY_GAP,
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: TRAY_HORIZONTAL_PADDING,
     paddingVertical: spacing.xs,
   },
   pieceSlot: {
