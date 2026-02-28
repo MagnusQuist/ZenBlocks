@@ -5,19 +5,40 @@
  * - Right-side placeholder for future streak
  */
 
-import React from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { spacing, typography, colors, borderRadius } from "../theme";
+import { StreakBadge } from "./StreakBadge";
 
 type LevelHeaderProps = {
   levelNumber: number;
   showBack?: boolean;
+  /** Streak count (consecutive levels without undo). Shown with fire icon when >= 3. */
+  streak?: number;
 };
 
-export function LevelHeader({ levelNumber, showBack = true }: LevelHeaderProps) {
+export function LevelHeader({ levelNumber, showBack = true, streak = 0 }: LevelHeaderProps) {
   const router = useRouter();
+  const [isPoofing, setIsPoofing] = useState(false);
+  const [poofStreak, setPoofStreak] = useState(0);
+  const prevStreakRef = useRef(0);
+
+  const isLosingStreak = streak < 3 && prevStreakRef.current >= 3;
+  const showStreak = streak >= 3 || isPoofing || isLosingStreak;
+  const showPoofOut = isPoofing || isLosingStreak;
+  const displayStreakValue = isPoofing ? poofStreak : isLosingStreak ? prevStreakRef.current : streak;
+  /** True when user just reached streak (e.g. completed 3rd level without undo). */
+  const animateFlame = streak >= 3 && prevStreakRef.current < 3;
+
+  useLayoutEffect(() => {
+    if (streak < 3 && prevStreakRef.current >= 3) {
+      setPoofStreak(prevStreakRef.current);
+      setIsPoofing(true);
+    }
+    prevStreakRef.current = streak;
+  }, [streak]);
 
   const handleBack = () => {
     try {
@@ -53,8 +74,20 @@ export function LevelHeader({ levelNumber, showBack = true }: LevelHeaderProps) 
       </View>
 
       <View style={styles.right}>
-        {/* reserved for streak / progress later */}
-        <View style={styles.iconBtnGhost} />
+        {showStreak ? (
+          <StreakBadge
+            streak={streak}
+            animateFlame={animateFlame}
+            poofOut={showPoofOut}
+            displayStreak={displayStreakValue}
+            onPoofComplete={() => {
+              setIsPoofing(false);
+              prevStreakRef.current = 0;
+            }}
+          />
+        ) : (
+          <View style={styles.iconBtnGhost} />
+        )}
       </View>
     </View>
   );
@@ -71,7 +104,7 @@ const styles = StyleSheet.create({
   },
   left: { width: 54, alignItems: "flex-start" },
   right: { width: 54, alignItems: "flex-end" },
-  center: { flex: 1, alignItems: "center" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
 
   iconBtn: {
     width: 42,

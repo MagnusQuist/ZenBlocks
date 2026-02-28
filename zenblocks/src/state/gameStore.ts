@@ -52,6 +52,10 @@ type GameStore = {
   rewardedModalPurpose: "undo" | "skip" | null;
   interstitialVisible: boolean;
   pendingNextLevel: number | null;
+  /** True if the player used undo (free or rewarded) on the current level. */
+  usedUndoThisLevel: boolean;
+  /** Consecutive levels completed without using undo. Streak display when >= 3. */
+  consecutiveNoUndoCompletions: number;
 
   // actions
   initApp: () => Promise<void>;
@@ -84,15 +88,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
   rewardedModalPurpose: null,
   interstitialVisible: false,
   pendingNextLevel: null,
+  usedUndoThisLevel: false,
+  consecutiveNoUndoCompletions: 0,
 
   initApp: async () => {
-    const [level, settings] = await Promise.all([
+    const [level, settings, consecutiveNoUndo] = await Promise.all([
       storage.getCurrentLevel(),
       storage.getSettings(),
+      storage.getConsecutiveNoUndoCompletions(),
     ]);
     set({
       currentLevelNumber: level,
       settings,
+      consecutiveNoUndoCompletions: consecutiveNoUndo,
     });
     get().startNewLevel(level);
   },
@@ -120,6 +128,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       initialLevelSnapshot: snapshot,
       failureModalVisible: false,
       rewardedModalPurpose: null,
+      usedUndoThisLevel: false,
     });
     storage.setCurrentLevel(levelNumber);
   },
@@ -152,11 +161,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
   undo: () => {
     const state = get().levelState;
     if (!state || state.placedPlacements.length === 0) return;
+    const hadStreak = get().consecutiveNoUndoCompletions >= 3;
     const lastPlacement = state.placedPlacements[state.placedPlacements.length - 1];
     const lastPiece = state.placedPieces[state.placedPieces.length - 1];
     const newGrid = state.grid.map((row) => [...row]);
     clearPlacement(newGrid, lastPlacement.occupied);
     set({
+      usedUndoThisLevel: true,
+      ...(hadStreak ? { consecutiveNoUndoCompletions: 0 } : {}),
       levelState: {
         ...state,
         grid: newGrid,
@@ -166,12 +178,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
         undosRemaining: state.undosRemaining > 0 ? state.undosRemaining - 1 : state.undosRemaining,
       },
     });
+    if (hadStreak) storage.setConsecutiveNoUndoCompletions(0);
   },
 
   retryLevel: () => {
     const snapshot = get().initialLevelSnapshot;
     const n = get().currentLevelNumber;
-    set({ failureModalVisible: false });
+    set({ failureModalVisible: false, consecutiveNoUndoCompletions: 0 });
+    storage.setConsecutiveNoUndoCompletions(0);
     if (snapshot && snapshot.levelNumber === n) {
       set({
         levelState: {
@@ -207,6 +221,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   completeLevel: () => {
     const n = get().currentLevelNumber;
+    const usedUndo = get().usedUndoThisLevel;
+    const nextStreak = usedUndo ? 0 : get().consecutiveNoUndoCompletions + 1;
+    set({ consecutiveNoUndoCompletions: nextStreak });
+    storage.setConsecutiveNoUndoCompletions(nextStreak);
+
     if (n > 0 && n % 4 === 0) {
       set({ interstitialVisible: true, pendingNextLevel: n + 1 });
       MockAdsService.showInterstitial();
@@ -217,7 +236,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   skipLevelRewarded: () => {
     const n = get().currentLevelNumber;
-    set({ failureModalVisible: false, rewardedModalPurpose: null });
+    set({ failureModalVisible: false, rewardedModalPurpose: null, consecutiveNoUndoCompletions: 0 });
+    storage.setConsecutiveNoUndoCompletions(0);
     get().startNewLevel(n + 1);
     storage.setCurrentLevel(n + 1);
   },

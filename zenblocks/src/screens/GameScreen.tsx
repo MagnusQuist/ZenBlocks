@@ -99,6 +99,7 @@ function findBestAnchor(
 export default function GameScreen() {
   const levelState = useGameStore((s) => s.levelState);
   const currentLevelNumber = useGameStore((s) => s.currentLevelNumber);
+  const consecutiveNoUndoCompletions = useGameStore((s) => s.consecutiveNoUndoCompletions);
   const settings = useGameStore((s) => s.settings);
 
   const placePiece = useGameStore((s) => s.placePiece);
@@ -341,7 +342,7 @@ export default function GameScreen() {
           },
         ]}
       >
-        <LevelHeader levelNumber={currentLevelNumber} />
+        <LevelHeader levelNumber={currentLevelNumber} streak={consecutiveNoUndoCompletions} />
 
         {/* Board card */}
         <View style={styles.gridArea}>

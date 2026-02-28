@@ -23,6 +23,7 @@ import Animated, {
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, typography, borderRadius } from "../theme";
 import { useGameStore } from "../state/gameStore";
+import { StreakBadge } from "../components/StreakBadge";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
@@ -193,6 +194,8 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const currentLevel = useGameStore((s) => s.currentLevelNumber);
+  const streak = useGameStore((s) => s.consecutiveNoUndoCompletions);
+  const showStreak = streak >= 3;
 
   return (
     <View style={styles.root}>
@@ -209,18 +212,30 @@ export default function WelcomeScreen() {
           },
         ]}
       >
-        <View style={styles.levelPill}>
-          <Text style={styles.levelPillText}>Level {currentLevel}</Text>
+        <View style={styles.topBarLeft}>
+          {showStreak ? (
+            <StreakBadge streak={streak} variant="compact" />
+          ) : (
+            <View style={styles.topBarSpacer} />
+          )}
         </View>
 
-        <TouchableOpacity
-          style={styles.settingsBtn}
-          onPress={() => router.push("/settings")}
-          activeOpacity={0.85}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Ionicons name="settings-sharp" size={20} color={colors.text} />
-        </TouchableOpacity>
+        <View style={styles.topBarCenter}>
+          <View style={styles.levelPill}>
+            <Text style={styles.levelPillText}>Level {currentLevel}</Text>
+          </View>
+        </View>
+
+        <View style={styles.topBarRight}>
+          <TouchableOpacity
+            style={styles.settingsBtn}
+            onPress={() => router.push("/settings")}
+            activeOpacity={0.85}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons name="settings-sharp" size={20} color={colors.text} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Main content */}
@@ -236,7 +251,7 @@ export default function WelcomeScreen() {
       >
         <View style={styles.hero}>
           <Text style={styles.title}>Neon{"\n"}Blocks</Text>
-          <Text style={styles.subtitle}>Fit the blocks. Clear the board</Text>
+          <Text style={styles.subtitle}>Fit the blocks. Fill the board</Text>
 
           <MiniBoardPreview />
 
@@ -270,9 +285,25 @@ const styles = StyleSheet.create({
     zIndex: 5,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
   },
 
+  topBarLeft: {
+    width: 54,
+    alignItems: "flex-start",
+  },
+  topBarCenter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  topBarSpacer: {
+    width: 54,
+    height: 36,
+  },
+  topBarRight: {
+    width: 54,
+    alignItems: "flex-end",
+  },
   levelPill: {
     paddingVertical: 8,
     paddingHorizontal: 12,

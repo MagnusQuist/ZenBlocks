@@ -9,6 +9,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const KEYS = {
   CURRENT_LEVEL: "@neonblocks/currentLevel",
   SETTINGS: "@neonblocks/settings",
+  CONSECUTIVE_NO_UNDO: "@neonblocks/consecutiveNoUndo",
 } as const;
 
 export type StoredSettings = {
@@ -53,6 +54,21 @@ export async function getCurrentLevel(): Promise<number> {
 
 export async function setCurrentLevel(level: number): Promise<void> {
   await setItem(KEYS.CURRENT_LEVEL, String(level));
+}
+
+export async function getConsecutiveNoUndoCompletions(): Promise<number> {
+  try {
+    const s = await getItem(KEYS.CONSECUTIVE_NO_UNDO);
+    if (s == null) return 0;
+    const n = parseInt(s, 10);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function setConsecutiveNoUndoCompletions(count: number): Promise<void> {
+  await setItem(KEYS.CONSECUTIVE_NO_UNDO, String(Math.max(0, count)));
 }
 
 export async function getSettings(): Promise<StoredSettings> {
