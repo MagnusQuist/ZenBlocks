@@ -222,6 +222,17 @@ export default function UnlocksScreen() {
             </View>
           ))}
         </View>
+
+        <Text style={styles.endGoalSectionTitle}>Beyond</Text>
+        <View style={styles.endGoalCard}>
+          <View style={styles.endGoalLockIcon}>
+            <Ionicons name="diamond" size={20} color="rgba(255,215,0,0.9)" />
+          </View>
+          <Text style={styles.endGoalTitle}>??? ??? ???</Text>
+          <Text style={styles.endGoalSubtitle}>
+            Beyond enlightenment lies the true crown. Keep playing to discover.
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );
@@ -444,5 +455,52 @@ const styles = StyleSheet.create({
     height: "100%",
     backgroundColor: colors.primary,
     borderRadius: 2,
+  },
+  endGoalSectionTitle: {
+    ...typography.caption,
+    color: "rgba(255,215,0,0.5)",
+    marginBottom: spacing.sm,
+    marginTop: spacing.lg,
+    letterSpacing: 3,
+    textTransform: "uppercase",
+  },
+  endGoalCard: {
+    position: "relative",
+    overflow: "hidden",
+    backgroundColor: "rgba(30,22,8,0.85)",
+    borderRadius: borderRadius.lg,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,215,0,0.4)",
+    padding: spacing.lg,
+    paddingTop: spacing.lg + 4,
+    shadowColor: "#FFD700",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.45,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  endGoalLockIcon: {
+    alignSelf: "center",
+    marginBottom: spacing.sm,
+    opacity: 0.95,
+  },
+  endGoalTitle: {
+    ...typography.header,
+    fontSize: 20,
+    color: "rgba(255,215,0,0.95)",
+    textAlign: "center",
+    letterSpacing: 4,
+    marginBottom: spacing.sm,
+    textShadowColor: "rgba(255,215,0,0.6)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
+  },
+  endGoalSubtitle: {
+    ...typography.caption,
+    fontSize: 12,
+    color: "rgba(255,220,130,0.75)",
+    textAlign: "center",
+    lineHeight: 18,
+    letterSpacing: 0.5,
   },
 });

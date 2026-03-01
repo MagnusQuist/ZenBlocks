@@ -113,6 +113,7 @@ export default function GameScreen() {
 
   const setFailureModalVisible = useGameStore((s) => s.setFailureModalVisible);
   const setRewardedModalPurpose = useGameStore((s) => s.setRewardedModalPurpose);
+  const setCompletionX3PendingScore = useGameStore((s) => s.setCompletionX3PendingScore);
   const onRewardedComplete = useGameStore((s) => s.onRewardedComplete);
   const onRewardedDismiss = useGameStore((s) => s.onRewardedDismiss);
 
@@ -355,6 +356,16 @@ export default function GameScreen() {
     onRewardedDismiss();
   }, [grantHintFromAd, onRewardedDismiss]);
 
+  const handleWatchAdForCompletionX3 = useCallback(async () => {
+    const result = await MockAdsService.showRewarded();
+    if (result === "completed") {
+      onRewardedComplete();
+      dismissCompletionOverlay();
+    } else {
+      onRewardedDismiss();
+    }
+  }, [onRewardedComplete, onRewardedDismiss, dismissCompletionOverlay]);
+
   const onContainerLayout = useCallback((e: { nativeEvent: { layout: { width: number; height: number } } }) => {
     const { width, height } = e.nativeEvent.layout;
     containerSize.current = { width, height };
@@ -475,6 +486,14 @@ export default function GameScreen() {
         visible={completionOverlayVisible}
         data={completionOverlayData}
         onDismiss={dismissCompletionOverlay}
+        onWatchPress={
+          completionOverlayData
+            ? () => {
+                setCompletionX3PendingScore(completionOverlayData.finalLevelScore);
+                setRewardedModalPurpose("completion_x3");
+              }
+            : undefined
+        }
       />
 
       {/* Ghost piece */}
@@ -519,7 +538,9 @@ export default function GameScreen() {
               ? handleSkipWatchAd
               : rewardedModalPurpose === "hint"
                 ? handleWatchAdForHint
-                : () => { }
+                : rewardedModalPurpose === "completion_x3"
+                  ? handleWatchAdForCompletionX3
+                  : () => {}
         }
         onDismiss={onRewardedDismiss}
       />

@@ -8,7 +8,7 @@ import { colors, spacing, borderRadius, typography } from "../theme";
 
 type RewardedModalProps = {
   visible: boolean;
-  purpose: "undo" | "skip" | "hint" | null;
+  purpose: "undo" | "skip" | "hint" | "completion_x3" | null;
   onWatch: () => void;
   onDismiss: () => void;
 };
@@ -17,6 +17,7 @@ const PURPOSE_TITLES: Record<NonNullable<RewardedModalProps["purpose"]>, string>
   undo: "Watch ad to undo",
   skip: "Watch ad to skip level",
   hint: "Watch ad for a hint",
+  completion_x3: "Watch ad for x3 earnings",
 };
 
 export function RewardedModal({ visible, purpose, onWatch, onDismiss }: RewardedModalProps) {

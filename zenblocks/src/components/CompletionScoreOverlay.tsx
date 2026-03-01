@@ -25,9 +25,10 @@ type Props = {
   visible: boolean;
   data: CompletionOverlayData | null;
   onDismiss: () => void;
+  onWatchPress?: () => void;
 };
 
-export function CompletionScoreOverlay({ visible, data, onDismiss }: Props) {
+export function CompletionScoreOverlay({ visible, data, onDismiss, onWatchPress }: Props) {
   const [displayEarned, setDisplayEarned] = useState(0);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const earnedOpacity = useSharedValue(0);
@@ -101,13 +102,26 @@ export function CompletionScoreOverlay({ visible, data, onDismiss }: Props) {
           </View>
         )}
 
-        <TouchableOpacity
-          style={styles.continueBtn}
-          onPress={onDismiss}
-          activeOpacity={0.9}
-        >
-          <Text style={styles.continueBtnText}>Continue</Text>
-        </TouchableOpacity>
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={styles.watchBtn}
+            onPress={onWatchPress}
+            activeOpacity={0.9}
+            disabled={!onWatchPress}
+          >
+            <Ionicons name="play-circle" size={18} color={onWatchPress ? "#FFD166" : colors.textMuted} />
+            <Text style={[styles.watchBtnText, !onWatchPress && styles.watchBtnTextDisabled]}>
+              x3
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.continueBtn}
+            onPress={onDismiss}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.continueBtnText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -221,6 +235,42 @@ const styles = StyleSheet.create({
     textShadowColor: colors.primaryGlow,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
+  },
+  actionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    alignSelf: "stretch",
+    justifyContent: "center",
+  },
+  watchBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(255,209,102,0.18)",
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: "rgba(255,209,102,0.5)",
+    shadowColor: "#FFD166",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  watchBtnText: {
+    ...typography.button,
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#FFD166",
+    letterSpacing: 0.5,
+    textShadowColor: "rgba(255,209,102,0.5)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
+  },
+  watchBtnTextDisabled: {
+    color: colors.textMuted,
   },
   continueBtn: {
     backgroundColor: colors.accent,

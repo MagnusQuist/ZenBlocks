@@ -72,7 +72,8 @@ type GameStore = {
   levelState: LevelState | null;
   initialLevelSnapshot: InitialLevelSnapshot | null;
   failureModalVisible: boolean;
-  rewardedModalPurpose: "undo" | "skip" | "hint" | null;
+  rewardedModalPurpose: "undo" | "skip" | "hint" | "completion_x3" | null;
+  completionX3PendingScore: number | null;
   interstitialVisible: boolean;
   pendingNextLevel: number | null;
   usedUndoThisLevel: boolean;
@@ -117,7 +118,8 @@ type GameStore = {
   setSoundEnabled: (v: boolean) => void;
   setHapticsEnabled: (v: boolean) => void;
   setFailureModalVisible: (v: boolean) => void;
-  setRewardedModalPurpose: (p: "undo" | "skip" | "hint" | null) => void;
+  setRewardedModalPurpose: (p: "undo" | "skip" | "hint" | "completion_x3" | null) => void;
+  setCompletionX3PendingScore: (score: number | null) => void;
   /** Consume one hint (free or ad). Returns true if a hint was available. */
   useHint: () => boolean;
   grantHintFromAd: () => void;
@@ -139,6 +141,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   initialLevelSnapshot: null,
   failureModalVisible: false,
   rewardedModalPurpose: null,
+  completionX3PendingScore: null,
   interstitialVisible: false,
   pendingNextLevel: null,
   usedUndoThisLevel: false,
@@ -469,11 +472,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
   setFailureModalVisible: (v: boolean) => set({ failureModalVisible: v }),
-  setRewardedModalPurpose: (p: "undo" | "skip" | "hint" | null) => set({ rewardedModalPurpose: p }),
+  setRewardedModalPurpose: (p: "undo" | "skip" | "hint" | "completion_x3" | null) => set({ rewardedModalPurpose: p }),
+  setCompletionX3PendingScore: (score: number | null) => set({ completionX3PendingScore: score }),
   onRewardedComplete: () => {
     const purpose = get().rewardedModalPurpose;
     if (purpose === "undo") get().undo();
     if (purpose === "skip") get().skipLevelRewarded();
+    if (purpose === "completion_x3") {
+      const pending = get().completionX3PendingScore ?? 0;
+      const delta = pending * 2;
+      const newTotal = get().totalScore + delta;
+      const newBest = Math.max(get().bestTotalScore, newTotal);
+      set({
+        totalScore: newTotal,
+        bestTotalScore: newBest,
+        completionX3PendingScore: null,
+      });
+      storage.setTotalScore(newTotal);
+      storage.setBestTotalScore(newBest);
+    }
     set({ rewardedModalPurpose: null });
   },
   onRewardedDismiss: () => set({ rewardedModalPurpose: null }),
