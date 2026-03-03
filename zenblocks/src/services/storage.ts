@@ -15,6 +15,8 @@ const KEYS = {
   BEST_LEVEL_SCORES: "@neonblocks/bestLevelScoreByLevelId",
   SELECTED_TITLE_ID: "@neonblocks/selectedTitleId",
   SEEN_TITLE_IDS: "@neonblocks/seenTitleIds",
+  ONBOARDING_DRAG_SEEN: "@neonblocks/onboardingDragSeen",
+  ONBOARDING_SCROLL_SEEN: "@neonblocks/onboardingScrollSeen",
 } as const;
 
 export type StoredSettings = {
@@ -172,4 +174,30 @@ export async function getSeenTitleIds(): Promise<string[]> {
 
 export async function setSeenTitleIds(ids: string[]): Promise<void> {
   await setItem(KEYS.SEEN_TITLE_IDS, JSON.stringify(ids));
+}
+
+export async function getHasSeenDragIntro(): Promise<boolean> {
+  try {
+    const s = await getItem(KEYS.ONBOARDING_DRAG_SEEN);
+    return s === "1";
+  } catch {
+    return false;
+  }
+}
+
+export async function setHasSeenDragIntro(): Promise<void> {
+  await setItem(KEYS.ONBOARDING_DRAG_SEEN, "1");
+}
+
+export async function getHasSeenScrollHint(): Promise<boolean> {
+  try {
+    const s = await getItem(KEYS.ONBOARDING_SCROLL_SEEN);
+    return s === "1";
+  } catch {
+    return false;
+  }
+}
+
+export async function setHasSeenScrollHint(): Promise<void> {
+  await setItem(KEYS.ONBOARDING_SCROLL_SEEN, "1");
 }

@@ -22,6 +22,7 @@ import type { TitleMilestoneId } from "../data/titleUnlocks";
 import {
   getHighestUnlockedTitleId,
   getTitleById,
+  getTitleScoreMultiplier,
   isTitleUnlocked,
   TITLE_MILESTONES,
 } from "../data/titleUnlocks";
@@ -33,11 +34,21 @@ export type CompletionOverlayData = {
   baseScore: number;
   cleanMultiplier: number;
   streakMultiplier: number;
+  /** Title score multiplier (e.g. 1.05) for the selected title. */
+  titleMultiplier: number;
   /** Streak count after this completion (e.g. 4 = "4 in a row"). */
   nextStreak: number;
   finalLevelScore: number;
   totalScore: number;
   bestTotalScore: number;
+  /** Titles newly unlocked by this completion (with perks for the overlay). */
+  newlyUnlockedTitles: {
+    id: TitleMilestoneId;
+    name: string;
+    scoreMultiplier: number;
+    extraHint?: number;
+    extraUndo?: number;
+  }[];
 };
 
 export type LevelState = {
@@ -232,6 +243,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       pieces,
       solution,
     };
+    const title = getTitleById(get().selectedTitleId);
+    const baseUndos = 1;
+    const undosRemaining = baseUndos + (title?.extraUndo ?? 0);
+    const adHintsEarnedThisLevel = title?.extraHint ?? 0;
     set({
       currentLevelNumber: levelNumber,
       levelState: {
@@ -241,7 +256,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         remainingPieces: pieces,
         placedPlacements: [],
         placedPieces: [],
-        undosRemaining: 1,
+        undosRemaining,
         solution,
       },
       initialLevelSnapshot: snapshot,
@@ -250,7 +265,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       usedUndoThisLevel: false,
       restartedThisLevel: false,
       freeHintUsedThisLevel: false,
-      adHintsEarnedThisLevel: 0,
+      adHintsEarnedThisLevel,
       hintPlacement: null,
     });
     storage.setCurrentLevel(levelNumber);
@@ -340,6 +355,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
     storage.setConsecutiveNoUndoCompletions(0);
     if (snapshot && snapshot.levelNumber === n) {
+      const title = getTitleById(get().selectedTitleId);
+      const undosRemaining = 1 + (title?.extraUndo ?? 0);
+      const adHintsEarnedThisLevel = title?.extraHint ?? 0;
       set({
         levelState: {
           levelNumber: snapshot.levelNumber,
@@ -348,11 +366,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
           remainingPieces: [...snapshot.pieces],
           placedPlacements: [],
           placedPieces: [],
-          undosRemaining: 1,
+          undosRemaining,
           solution: snapshot.solution,
         },
         freeHintUsedThisLevel: false,
-        adHintsEarnedThisLevel: 0,
+        adHintsEarnedThisLevel,
         hintPlacement: null,
       });
     } else {
@@ -396,17 +414,31 @@ export const useGameStore = create<GameStore>((set, get) => ({
       streakCount
     );
 
-    const newTotal = get().totalScore + breakdown.finalLevelScore;
+    const titleMultiplier = getTitleScoreMultiplier(get().selectedTitleId);
+    const actualLevelScore = Math.round(breakdown.finalLevelScore * titleMultiplier);
+
+    const prevTotal = get().totalScore;
+    const newTotal = prevTotal + actualLevelScore;
     const newBestTotal = Math.max(get().bestTotalScore, newTotal);
     const bestByLevel = { ...get().bestLevelScoreByLevelId };
     const prevBest = bestByLevel[n] ?? 0;
-    bestByLevel[n] = Math.max(prevBest, breakdown.finalLevelScore);
+    bestByLevel[n] = Math.max(prevBest, actualLevelScore);
+
+    const newlyUnlockedTitles = TITLE_MILESTONES.filter(
+      (t) => prevTotal < t.requiredScore && newTotal >= t.requiredScore
+    ).map((t) => ({
+      id: t.id,
+      name: t.name,
+      scoreMultiplier: t.scoreMultiplier,
+      extraHint: t.extraHint,
+      extraUndo: t.extraUndo,
+    }));
 
     set({
       totalScore: newTotal,
       bestTotalScore: newBestTotal,
       bestLevelScoreByLevelId: bestByLevel,
-      lastLevelScore: breakdown.finalLevelScore,
+      lastLevelScore: actualLevelScore,
       usedUndoThisLevel: false,
       restartedThisLevel: false,
       consecutiveNoUndoCompletions: nextStreak,
@@ -415,10 +447,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         baseScore: breakdown.baseScore,
         cleanMultiplier: breakdown.cleanMultiplier,
         streakMultiplier: breakdown.streakMultiplier,
+        titleMultiplier,
         nextStreak,
-        finalLevelScore: breakdown.finalLevelScore,
+        finalLevelScore: actualLevelScore,
         totalScore: newTotal,
         bestTotalScore: newBestTotal,
+        newlyUnlockedTitles,
       },
       pendingNextLevel: n + 1,
       showInterstitialAfterOverlay: n > 0 && n % 4 === 0,

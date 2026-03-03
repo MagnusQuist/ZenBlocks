@@ -3,7 +3,7 @@
  * Neon Night styling layer.
  */
 
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
@@ -14,9 +14,10 @@ import { useGameStore } from "../state/gameStore";
 import type { GridLayout } from "../components/Grid";
 import { Grid } from "../components/Grid";
 import { LevelHeader } from "../components/LevelHeader";
-import { PieceTray } from "../components/PieceTray";
+import { PieceTray, type FirstPieceLayout } from "../components/PieceTray";
 import { PieceView } from "../components/Piece";
 import { DraggablePiece } from "../components/DraggablePiece";
+import { DragIntroOverlay } from "../components/DragIntroOverlay";
 import { FailureModal } from "../components/FailureModal";
 import { RewardedModal } from "../components/RewardedModal";
 import { Confetti } from "../components/Confetti";
@@ -24,10 +25,12 @@ import { CompletionScoreOverlay } from "../components/CompletionScoreOverlay";
 import { getAbsoluteOccupied, isValidPlacement } from "../game/gridUtils";
 import { findHintFromStoredSolution } from "../game/hintFromSolution";
 import type { Piece } from "../game/levelGenerator";
+import type { TitleMilestoneId } from "../data/titleUnlocks";
 import { colors, spacing, typography, borderRadius } from "../theme";
 import { MockAdsService } from "../services/ads";
 import * as haptics from "../services/haptics";
 import * as sound from "../services/sound";
+import * as storage from "../services/storage";
 
 const SNAP_DURATION = 100;
 const DRAG_GHOST_OFFSET_Y = -96;
@@ -124,6 +127,7 @@ export default function GameScreen() {
   const completionOverlayVisible = useGameStore((s) => s.completionOverlayVisible);
   const completionOverlayData = useGameStore(useShallow((s) => s.completionOverlayData));
   const dismissCompletionOverlay = useGameStore((s) => s.dismissCompletionOverlay);
+  const setSelectedTitleId = useGameStore((s) => s.setSelectedTitleId);
   const freeHintUsedThisLevel = useGameStore((s) => s.freeHintUsedThisLevel);
   const adHintsEarnedThisLevel = useGameStore((s) => s.adHintsEarnedThisLevel);
   const hintPlacement = useGameStore((s) => s.hintPlacement);
@@ -160,7 +164,15 @@ export default function GameScreen() {
     dragHighlightCells.length > 0 ? dragHighlightCells : hintHighlightCells;
 
   const [showCompletionRipple, setShowCompletionRipple] = useState(false);
+  const [showDragIntro, setShowDragIntro] = useState(false);
+  const [hasSeenScrollHint, setHasSeenScrollHintState] = useState(true);
+  const [firstPieceLayoutWindow, setFirstPieceLayoutWindow] = useState<FirstPieceLayout | null>(null);
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    storage.getHasSeenDragIntro().then((seen) => setShowDragIntro(!seen));
+    storage.getHasSeenScrollHint().then((seen) => setHasSeenScrollHintState(seen));
+  }, []);
 
   const hintsRemaining = (freeHintUsedThisLevel ? 0 : 1) + adHintsEarnedThisLevel;
 
@@ -213,6 +225,10 @@ export default function GameScreen() {
   );
 
   const startDrag = useCallback((piece: Piece, screenX: number, screenY: number) => {
+    if (showDragIntro) {
+      setShowDragIntro(false);
+      storage.setHasSeenDragIntro();
+    }
     const ghost = { x: screenX + DRAG_GHOST_OFFSET_X, y: screenY + DRAG_GHOST_OFFSET_Y };
     const layout = gridLayoutRef.current;
     const cw = containerWindow.current;
@@ -226,7 +242,7 @@ export default function GameScreen() {
     ghostPositionRef.current = clamped;
     setDraggingPiece(piece);
     setDragScreenPosition(clamped);
-  }, []);
+  }, [showDragIntro]);
 
   const handleDragMove = useCallback(
     (screenX: number, screenY: number) => {
@@ -398,6 +414,31 @@ export default function GameScreen() {
   const hasRemainingPieces = levelState.remainingPieces.length > 0;
   const hintDisabled = !hasRemainingPieces;
 
+  const firstPiece = levelState.remainingPieces[0] ?? null;
+  const firstPiecePlacement =
+    firstPiece != null
+      ? levelState.solution.find((s) => s.pieceId === firstPiece.pieceId)?.topLeft ?? null
+      : null;
+  const cw = containerWindow.current;
+  const dragIntroFirstLayout =
+    showDragIntro && firstPieceLayoutWindow
+      ? {
+          x: firstPieceLayoutWindow.x - cw.x,
+          y: firstPieceLayoutWindow.y - cw.y,
+          width: firstPieceLayoutWindow.width,
+          height: firstPieceLayoutWindow.height,
+        }
+      : null;
+  const dragIntroGridLayout =
+    showDragIntro && gridLayout
+      ? {
+          x: gridLayout.x - cw.x,
+          y: gridLayout.y - cw.y,
+          cellSize: gridLayout.cellSize,
+          gridSize: gridLayout.gridSize,
+        }
+      : null;
+
   return (
     <View style={styles.container} ref={containerRef} onLayout={onContainerLayout}>
       <View
@@ -467,6 +508,7 @@ export default function GameScreen() {
         >
           <PieceTray
             pieces={levelState.remainingPieces}
+            onFirstPieceLayout={setFirstPieceLayoutWindow}
             renderPiece={(piece) => (
               <DraggablePiece
                 piece={piece}
@@ -476,9 +518,22 @@ export default function GameScreen() {
                 isDragging={draggingPiece?.pieceId === piece.pieceId}
               />
             )}
+            showScrollHint={currentLevelNumber === 2 && !hasSeenScrollHint}
+            onScrollHintDismiss={() => {
+              setHasSeenScrollHintState(true);
+              storage.setHasSeenScrollHint();
+            }}
           />
         </View>
       </View>
+
+      <DragIntroOverlay
+        visible={showDragIntro}
+        firstPieceLayout={dragIntroFirstLayout}
+        gridLayout={dragIntroGridLayout}
+        piece={firstPiece}
+        placement={firstPiecePlacement}
+      />
 
       <Confetti visible={showCompletionRipple} />
 
@@ -494,6 +549,7 @@ export default function GameScreen() {
               }
             : undefined
         }
+        onEquipTitle={(titleId) => setSelectedTitleId(titleId as TitleMilestoneId)}
       />
 
       {/* Ghost piece */}

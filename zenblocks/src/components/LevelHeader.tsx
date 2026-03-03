@@ -1,7 +1,7 @@
 /**
  * Neon Night game header:
  * - Back button (home)
- * - Level pill centered, score and streak mult under it
+ * - Level pill centered, equipped title pill under it, score and streak mult below
  * - Right: streak badge
  */
 
@@ -103,6 +103,18 @@ export function LevelHeader({ levelNumber, showBack = true, streak = 0 }: LevelH
         </View>
       </View>
 
+      {selectedTitle && (
+        <View style={styles.titleRow}>
+          <View style={styles.titlePill}>
+            <Ionicons name="ribbon" size={12} color={colors.accent} />
+            <Text style={styles.titlePillText} numberOfLines={1}>
+              {selectedTitle.name}
+            </Text>
+            <Text style={styles.titleMultiplier}>{selectedTitle.scoreMultiplier.toFixed(2)}×</Text>
+          </View>
+        </View>
+      )}
+
       <View style={styles.scoreRow}>
         {totalScore > 0 && <Text style={styles.scoreText}>{totalScore.toLocaleString()}</Text>}
         {streakActive && streakMultiplier > 1 && (
@@ -176,6 +188,36 @@ const styles = StyleSheet.create({
     textShadowColor: colors.primaryGlow,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 12,
+  },
+  titleRow: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing.xs,
+  },
+  titlePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: borderRadius.full,
+    backgroundColor: "rgba(0,245,212,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(0,245,212,0.22)",
+    maxWidth: 200,
+  },
+  titlePillText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.text,
+    letterSpacing: 0.2,
+    flexShrink: 1,
+  },
+  titleMultiplier: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: colors.accent,
+    letterSpacing: 0.2,
   },
   scoreRow: {
     flexDirection: "row",

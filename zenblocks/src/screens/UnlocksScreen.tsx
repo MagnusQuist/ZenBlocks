@@ -18,6 +18,10 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { useGameStore } from "../state/gameStore";
@@ -32,9 +36,39 @@ import { colors, spacing, typography, borderRadius } from "../theme";
 import * as haptics from "../services/haptics";
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+const AnimatedText = Animated.createAnimatedComponent(Text);
 
 /** Locked titles with requiredScore above this show "???" instead of the name. */
 const HIDDEN_TITLE_SCORE_THRESHOLD = 25000;
+
+/** Gold multiplier text with a wavy shine overlay. */
+function ShinyMultiplier({ value }: { value: string }) {
+  const shine = useSharedValue(0);
+
+  React.useEffect(() => {
+    shine.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0, { duration: 1200, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      false
+    );
+  }, [shine]);
+
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: shine.value * 0.55,
+  }));
+
+  return (
+    <View style={styles.shinyMultiplierWrap}>
+      <Text style={styles.currentMultiplier}>{value}</Text>
+      <AnimatedText style={[styles.currentMultiplierOverlay, overlayStyle]} numberOfLines={1}>
+        {value}
+      </AnimatedText>
+    </View>
+  );
+}
 
 function TitleCard({
   item,
@@ -187,11 +221,19 @@ export default function UnlocksScreen() {
 
         {hasAnyUnlock && (
           <View style={styles.currentCard}>
-            <Text style={styles.currentLabel}>Current Title</Text>
-            <Text style={styles.currentTitle}>
-              {selectedTitle ? selectedTitle.name : "None"}
-            </Text>
-            <Text style={styles.currentSubtitle}>Unlocked by score milestones</Text>
+            <View style={styles.currentCardLeft}>
+              <Text style={styles.currentLabel}>Current Title</Text>
+              <Text style={styles.currentTitle}>
+                {selectedTitle ? selectedTitle.name : "None"}
+              </Text>
+            </View>
+            <View style={styles.currentCardRight}>
+              {selectedTitle ? (
+                <ShinyMultiplier value={`${selectedTitle.scoreMultiplier.toFixed(2)}×`} />
+              ) : (
+                <Text style={styles.currentMultiplier}>—</Text>
+              )}
+            </View>
           </View>
         )}
 
@@ -297,6 +339,9 @@ const styles = StyleSheet.create({
     textShadowRadius: 12,
   },
   currentCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: "rgba(255,255,255,0.06)",
     borderRadius: borderRadius.lg,
     borderWidth: 1,
@@ -309,6 +354,13 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
+  currentCardLeft: {
+    flex: 1,
+  },
+  currentCardRight: {
+    justifyContent: "center",
+    alignItems: "flex-end",
+  },
   currentLabel: {
     ...typography.caption,
     fontSize: 11,
@@ -319,13 +371,31 @@ const styles = StyleSheet.create({
     ...typography.header,
     fontSize: 17,
     color: colors.text,
-    marginBottom: 2,
   },
-  currentSubtitle: {
-    ...typography.caption,
-    fontSize: 11,
-    color: colors.textMuted,
-    marginBottom: spacing.xs,
+  shinyMultiplierWrap: {
+    position: "relative",
+  },
+  currentMultiplier: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#E8B923",
+    letterSpacing: 0.3,
+    textShadowColor: "rgba(232, 185, 35, 0.7)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
+  currentMultiplierOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    fontSize: 20,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+    color: "#FFFDE7",
+    textShadowColor: "rgba(255, 255, 255, 0.8)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 4,
   },
   emptyCallout: {
     paddingVertical: spacing.sm,
