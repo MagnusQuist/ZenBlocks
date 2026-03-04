@@ -243,7 +243,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       pieces,
       solution,
     };
-    const title = getTitleById(get().selectedTitleId);
+    const title = getTitleById(get().selectedTitleId as TitleMilestoneId | null);
     const baseUndos = 1;
     const undosRemaining = baseUndos + (title?.extraUndo ?? 0);
     const adHintsEarnedThisLevel = title?.extraHint ?? 0;
@@ -355,7 +355,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
     storage.setConsecutiveNoUndoCompletions(0);
     if (snapshot && snapshot.levelNumber === n) {
-      const title = getTitleById(get().selectedTitleId);
+      const title = getTitleById(get().selectedTitleId as TitleMilestoneId | null);
       const undosRemaining = 1 + (title?.extraUndo ?? 0);
       const adHintsEarnedThisLevel = title?.extraHint ?? 0;
       set({
@@ -414,7 +414,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       streakCount
     );
 
-    const titleMultiplier = getTitleScoreMultiplier(get().selectedTitleId);
+    const titleMultiplier = getTitleScoreMultiplier(get().selectedTitleId as TitleMilestoneId | null);
     const actualLevelScore = Math.round(breakdown.finalLevelScore * titleMultiplier);
 
     const prevTotal = get().totalScore;
