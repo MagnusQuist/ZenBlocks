@@ -423,20 +423,20 @@ export default function GameScreen() {
   const dragIntroFirstLayout =
     showDragIntro && firstPieceLayoutWindow
       ? {
-          x: firstPieceLayoutWindow.x - cw.x,
-          y: firstPieceLayoutWindow.y - cw.y,
-          width: firstPieceLayoutWindow.width,
-          height: firstPieceLayoutWindow.height,
-        }
+        x: firstPieceLayoutWindow.x - cw.x,
+        y: firstPieceLayoutWindow.y - cw.y,
+        width: firstPieceLayoutWindow.width,
+        height: firstPieceLayoutWindow.height,
+      }
       : null;
   const dragIntroGridLayout =
     showDragIntro && gridLayout
       ? {
-          x: gridLayout.x - cw.x,
-          y: gridLayout.y - cw.y,
-          cellSize: gridLayout.cellSize,
-          gridSize: gridLayout.gridSize,
-        }
+        x: gridLayout.x - cw.x,
+        y: gridLayout.y - cw.y,
+        cellSize: gridLayout.cellSize,
+        gridSize: gridLayout.gridSize,
+      }
       : null;
 
   return (
@@ -544,9 +544,9 @@ export default function GameScreen() {
         onWatchPress={
           completionOverlayData
             ? () => {
-                setCompletionX3PendingScore(completionOverlayData.finalLevelScore);
-                setRewardedModalPurpose("completion_x3");
-              }
+              setCompletionX3PendingScore(completionOverlayData.finalLevelScore);
+              setRewardedModalPurpose("completion_x3");
+            }
             : undefined
         }
         onEquipTitle={(titleId) => setSelectedTitleId(titleId as TitleMilestoneId)}
@@ -596,7 +596,7 @@ export default function GameScreen() {
                 ? handleWatchAdForHint
                 : rewardedModalPurpose === "completion_x3"
                   ? handleWatchAdForCompletionX3
-                  : () => {}
+                  : () => { }
         }
         onDismiss={onRewardedDismiss}
       />

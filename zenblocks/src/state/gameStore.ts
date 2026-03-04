@@ -195,7 +195,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const currentSelected = get().selectedTitleId;
     const validSelected =
       currentSelected &&
-      isTitleUnlocked(total, currentSelected as TitleMilestoneId)
+        isTitleUnlocked(total, currentSelected as TitleMilestoneId)
         ? currentSelected
         : highestId;
     if (validSelected !== currentSelected) {
