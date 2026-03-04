@@ -13,8 +13,8 @@ export const colors = {
   border: "rgba(255,255,255,0.10)",
   gridLine: "rgba(255,255,255,0.14)",
 
-  // Board cells
-  cellEmpty: "rgba(255,255,255,0.06)",
+  // Board cells (lighter for better visibility)
+  cellEmpty: "rgba(255,255,255,0.12)",
   cellFilled: "rgba(120, 100, 255, 0.35)",
 
   // Piece colors (neon)

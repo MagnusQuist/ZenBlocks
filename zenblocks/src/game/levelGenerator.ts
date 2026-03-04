@@ -253,15 +253,17 @@ export function generateLevel(levelNumber: number): {
   }
 
   // Prevent UI freezes: time-box generation and progressively relax constraints.
+  // Levels 1–25: only phase 0 (no relaxation) so we never accept singles or extra pieces.
   const start = nowMs();
-  const TIME_BUDGET_MS = 80;
+  const TIME_BUDGET_MS = levelNumber <= 25 ? 120 : 80;
   const deadlineMsBase = start + TIME_BUDGET_MS;
 
-  const phases = [
+  const allPhases = [
     { piecesFactorBoost: 0.0, irregularBoost: 0, dominoBoost: 0, singlesBoost: 0 },
     { piecesFactorBoost: 0.04, irregularBoost: 1, dominoBoost: 1, singlesBoost: 0 },
     { piecesFactorBoost: 0.08, irregularBoost: 2, dominoBoost: 2, singlesBoost: 1 },
   ];
+  const phases = levelNumber <= 25 ? [allPhases[0]] : allPhases;
 
   for (const phase of phases) {
     for (let attempt = 0; attempt < 80; attempt++) {
@@ -303,12 +305,26 @@ export function generateLevel(levelNumber: number): {
     }
   }
 
-  // Fallback: generate a simple 4x4 Tier-1 level quickly (never freeze)
-  const fallbackGrid = createEmptyGrid(4);
-  const fallbackCandidates = [...TIER_1_SHAPES];
-  const fallbackPlaced = tilingFill(fallbackGrid, 4, fallbackCandidates, nowMs() + 40);
-  const fallbackPiecesOrdered = fallbackPlaced ? toPieces(fallbackPlaced) : [];
-  const fallbackSolution = fallbackPlaced ? toSolution(fallbackPlaced, fallbackPiecesOrdered) : emptySolution;
-  const pieces = shuffle(fallbackPiecesOrdered);
-  return { gridSize: 4, grid: createEmptyGrid(4), pieces, solution: fallbackSolution };
+  // Fallback: retry with same shape set and grid (never introduce small pieces).
+  // Use longer timeout so we don't fall back to Tier-1 small pieces for early levels.
+  const fallbackDeadline = nowMs() + (levelNumber <= 25 ? 150 : 60);
+  const fallbackGrid = createEmptyGrid(gridSize);
+  const fallbackPlaced = tilingFill(fallbackGrid, gridSize, candidateShapes, fallbackDeadline);
+  if (fallbackPlaced && fallbackPlaced.length > 0) {
+    const fallbackPiecesOrdered = toPieces(fallbackPlaced);
+    const fallbackSolution = toSolution(fallbackPlaced, fallbackPiecesOrdered);
+    const pieces = shuffle(fallbackPiecesOrdered);
+    return { gridSize, grid: createEmptyGrid(gridSize), pieces, solution: fallbackSolution };
+  }
+
+  // Last resort: 4x4 with chunks + O/I only (no single/domino/small-l)
+  const bigOnly = ["2x3", "3x2", "b", "fat-l-7", "o", "i"]
+    .map((id) => SHAPES_BY_ID[id])
+    .filter(Boolean);
+  const lastGrid = createEmptyGrid(4);
+  const lastPlaced = tilingFill(lastGrid, 4, bigOnly.length > 0 ? bigOnly : candidateShapes, nowMs() + 50);
+  const lastPiecesOrdered = lastPlaced ? toPieces(lastPlaced) : [];
+  const lastSolution = lastPlaced ? toSolution(lastPlaced, lastPiecesOrdered) : emptySolution;
+  const pieces = shuffle(lastPiecesOrdered);
+  return { gridSize: 4, grid: createEmptyGrid(4), pieces, solution: lastSolution };
 }

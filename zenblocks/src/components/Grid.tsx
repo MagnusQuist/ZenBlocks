@@ -13,7 +13,9 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withRepeat,
   Easing,
+  interpolateColor,
   type SharedValue,
 } from "react-native-reanimated";
 import { colors, spacing, borderRadius } from "../theme";
@@ -99,6 +101,30 @@ export function Grid({
   showCompletionRipple = false,
 }: GridProps) {
   const rippleProgress = useSharedValue(0);
+  const neonPhase = useSharedValue(0);
+
+  useEffect(() => {
+    // 0 → 1: cyan → violet → cyan so the loop has no jump
+    neonPhase.value = withRepeat(
+      withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      false
+    );
+  }, [neonPhase]);
+
+  const neonBorderStyle = useAnimatedStyle(() => {
+    "worklet";
+    const color = interpolateColor(
+      neonPhase.value,
+      [0, 0.5, 1],
+      [
+        "rgba(0, 245, 212, 0.55)",
+        "rgba(139, 92, 246, 0.6)",
+        "rgba(0, 245, 212, 0.55)",
+      ]
+    );
+    return { borderColor: color };
+  });
 
   const filledCells = useMemo(() => {
     const out: { r: number; c: number }[] = [];
@@ -167,6 +193,22 @@ export function Grid({
     <View style={styles.container} onLayout={handleLayout}>
       {layout && (
         <>
+          {/* Neon border: frame sits outside grid so border never overlaps cells */}
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              {
+                position: "absolute",
+                left: layout.localX - 4,
+                top: layout.localY - 4,
+                width: layout.cellSize * layout.gridSize + 8,
+                height: layout.cellSize * layout.gridSize + 8,
+                borderWidth: 2,
+                borderRadius: borderRadius.md + 4,
+              },
+              neonBorderStyle,
+            ]}
+          />
           {/* Cells */}
           <View
             ref={gridWrapRef}
@@ -196,7 +238,7 @@ export function Grid({
                         backgroundColor: isHighlighted ? colors.validHighlight : colors.cellEmpty,
                         borderColor: isHighlighted
                           ? colors.validHighlightBorder
-                          : "rgba(255,255,255,0.08)",
+                          : "rgba(255,255,255,0.14)",
                         borderWidth: 1,
                       },
                     ]}
@@ -278,10 +320,8 @@ const styles = StyleSheet.create({
 
   gridWrap: {
     position: "absolute",
-    backgroundColor: "transparent", // ✅ sits on background
+    backgroundColor: "transparent",
     borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
     overflow: "hidden",
   },
 

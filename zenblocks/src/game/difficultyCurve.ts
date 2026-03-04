@@ -1,9 +1,8 @@
 /**
  * Difficulty curve: grid size and shape tiers by level number.
- * Levels 1–8: grid 4–5, mostly Tier 1
- * Levels 9–30: grid 5–6, add Tier 2
- * Levels 31–80: grid 6–7, more Tier 2
- * Levels 81+: grid 7–9, add Tier 3
+ * Levels 1–25: favor BIG pieces only (chunks + O/I), few pieces per level.
+ * Levels 25+: slowly introduce smaller pieces and more pieces.
+ * Grid: 1–8 → 4–5, 9–30 → 5–6, 31–80 → 6–7, 81+ → 7–9.
  */
 
 import { TIER_1_SHAPES, TIER_2_SHAPES, TIER_3_SHAPES } from "./shapes";
@@ -81,27 +80,24 @@ function blendWeights(
 
 /**
  * Engagement-first curve:
- * - early levels feel easy and satisfying (big obvious pieces)
- * - variety stays high (multiple shape types appear)
- * - ramp is smooth via blending instead of step changes
+ * - Levels 1–25: big pieces only (chunks + O/I), low piece count
+ * - Levels 25+: slowly introduce smaller pieces and more pieces
  */
 export function getGeneratorConfig(levelNumber: number): GeneratorConfig {
-  // Base pools (weights)
-  const EASY: Record<string, number> = {
-    // Big easy chunks (early game)
-    "2x3": 10,
-    "3x2": 8,
-    b: 5,
-    "fat-l-7": 4,
-    "3x3": 1, // rare
+  // Levels 1–25: BIG PIECES ONLY — chunks + O/I + light 3-line. No single/domino/small-l/l/t/z.
+  const BIG_FIRST: Record<string, number> = {
+    "2x3": 12,
+    "3x2": 10,
+    b: 6,
+    "fat-l-7": 5,
+    "3x3": 2,
 
-    // Classic friendly
     o: 8,
     i: 7,
-    "3-line": 6,
-    "small-l": 3,
-    domino: 1,
-    l: 1,
+    "3-line": 2, // minimal variety, still 3-block
+    "small-l": 0,
+    domino: 0,
+    l: 0,
     t: 0,
     z: 0,
     single: 0,
@@ -113,21 +109,22 @@ export function getGeneratorConfig(levelNumber: number): GeneratorConfig {
     step: 0,
   };
 
+  // After 25: gradually add smaller and trickier shapes
   const MED: Record<string, number> = {
     "2x3": 8,
     "3x2": 6,
     b: 4,
     "fat-l-7": 3,
-    "3x3": 1, // still rare
+    "3x3": 1,
 
     o: 7,
     i: 6,
     "3-line": 5,
-    "small-l": 4,
-    domino: 2,
-    l: 3,
-    t: 2,
-    z: 2,
+    "small-l": 3,
+    domino: 1,
+    l: 2,
+    t: 1,
+    z: 1,
     single: 0,
 
     "5-line": 0,
@@ -138,12 +135,11 @@ export function getGeneratorConfig(levelNumber: number): GeneratorConfig {
   };
 
   const HARD: Record<string, number> = {
-    // Chunks taper off but still appear occasionally
     "2x3": 4,
     "3x2": 3,
     b: 2,
     "fat-l-7": 1,
-    "3x3": 0, // remove from late to avoid trivializing
+    "3x3": 0,
 
     o: 5,
     i: 5,
@@ -162,9 +158,6 @@ export function getGeneratorConfig(levelNumber: number): GeneratorConfig {
     step: 2,
   };
 
-  // Smooth blending factors
-  // 1..12 transitions EASY -> MED
-  // 13..45 transitions MED -> HARD
   let weights: Record<string, number>;
   let maxPiecesFactor: number;
   let maxSingles: number;
@@ -172,36 +165,36 @@ export function getGeneratorConfig(levelNumber: number): GeneratorConfig {
   let maxDomino: number;
   let requireOneOf: string[];
 
-  if (levelNumber <= 12) {
-    const t = Math.max(0, Math.min(1, (levelNumber - 1) / 11));
-    weights = blendWeights(EASY, MED, t);
-
-    // Keep early levels snappy and easy
-    maxPiecesFactor = lerp(0.30, 0.38, t); // fewer pieces early
-    maxSingles = 0; // ✅ FIX: was missing
-    maxIrregular = 1;
-    maxDomino = 2;
-    requireOneOf = ["2x3", "o", "i"]; // ensure a chunky or obvious anchor
-  } else if (levelNumber <= 45) {
-    const t = Math.max(0, Math.min(1, (levelNumber - 13) / 32));
+  if (levelNumber <= 25) {
+    // Strict big-pieces band: no blending yet, keep piece count low
+    weights = { ...BIG_FIRST };
+    // Fewer pieces = bigger average piece size. 0.20–0.26 over 1–25
+    const t = Math.max(0, Math.min(1, (levelNumber - 1) / 24));
+    maxPiecesFactor = lerp(0.20, 0.26, t);
+    maxSingles = 0;
+    maxIrregular = 0;
+    maxDomino = 0;
+    requireOneOf = ["2x3", "3x2", "o", "i"];
+  } else if (levelNumber <= 55) {
+    // Slow ramp: 25→55 blend MED → HARD, and slowly increase piece count
+    const t = Math.max(0, Math.min(1, (levelNumber - 25) / 30));
     weights = blendWeights(MED, HARD, t);
-
-    maxPiecesFactor = lerp(0.36, 0.46, t);
-    maxSingles = t < 0.6 ? 0 : 1;
-    maxIrregular = Math.round(lerp(2, 4, t));
-    maxDomino = Math.round(lerp(3, 4, t));
+    maxPiecesFactor = lerp(0.28, 0.42, t);
+    maxSingles = t < 0.5 ? 0 : 1;
+    maxIrregular = Math.round(lerp(1, 4, t));
+    maxDomino = Math.round(lerp(1, 4, t));
     requireOneOf = ["2x3", "o", "i"];
   } else {
     weights = HARD;
-    maxPiecesFactor = 0.54;
+    const t = Math.max(0, Math.min(1, (levelNumber - 55) / 45));
+    maxPiecesFactor = lerp(0.42, 0.52, t);
     maxSingles = 1;
     maxIrregular = 5;
     maxDomino = 5;
     requireOneOf = ["o", "i"];
   }
 
-  // Add a small "rest level" pattern for engagement:
-  // every 5th level becomes slightly easier (fewer pieces + more O/I)
+  // Rest levels: slightly easier (more O/I, fewer pieces)
   if (levelNumber % 5 === 0) {
     weights = {
       ...weights,
@@ -211,8 +204,8 @@ export function getGeneratorConfig(levelNumber: number): GeneratorConfig {
       z: Math.max(0, (weights.z ?? 0) - 1),
       step: Math.max(0, (weights.step ?? 0) - 1),
     };
-    maxPiecesFactor = Math.max(0.32, maxPiecesFactor - 0.04);
-    maxIrregular = Math.max(1, maxIrregular - 1);
+    maxPiecesFactor = Math.max(0.22, maxPiecesFactor - 0.04);
+    maxIrregular = Math.max(0, maxIrregular - 1);
   }
 
   return {
